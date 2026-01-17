@@ -11,8 +11,12 @@ import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.wpilibj.Filesystem;
 
 public class VisionConstants {
+
+  public static boolean loadHomeField = true;
+  public static String homeFieldFileName = "whshallway.json";
   // AprilTag layout
   public static AprilTagFieldLayout aprilTagLayout =
       AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
@@ -49,4 +53,27 @@ public class VisionConstants {
   public static double linearStdDevMegatag2Factor = 0.5; // More stable than full 3D solve
   public static double angularStdDevMegatag2Factor =
       Double.POSITIVE_INFINITY; // No rotation data available
+
+  static {
+    if (loadHomeField) {
+      try {
+        // Full path to the JSON file
+        String jsonFilePath = Filesystem.getDeployDirectory() + "\\" + homeFieldFileName;
+
+        System.out.println("Loading AprilTag layout from path: " + jsonFilePath);
+
+        aprilTagLayout = new AprilTagFieldLayout(jsonFilePath);
+
+        System.out.println(homeFieldFileName + " AprilTag layout loaded successfully.");
+      } catch (Exception e) {
+        System.err.println("Error loading AprilTag layout: " + e.getMessage());
+        e.printStackTrace();
+        aprilTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeAndyMark);
+        System.out.println("Reefscape AndyMark AprilTag layout loaded successfully.");
+      }
+    } else {
+      aprilTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeAndyMark);
+      System.out.println("Reefscape AndyMark AprilTag layout loaded successfully.");
+    }
+  }
 }
