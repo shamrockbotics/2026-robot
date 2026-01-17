@@ -1,20 +1,11 @@
 #!/usr/bin/env python3
 
 """
-This script converts all AprilTag field layout CSV files in
-src/main/native/resources/edu/wpi/first/apriltag to the JSON format
-AprilTagFields expects.
+Convert AprilTag field layout CSV files to WPILib JSON format.
 
-The input CSV has the following format:
-
-* Columns: ID, X, Y, Z, Z Rotation, Y Rotation
-* ID is a positive integer
-* X, Y, and Z are decimal inches
-* Z Rotation is yaw in degrees
-* Y Rotation is pitch in degrees
-
-The values come from a table in the layout marking diagram (e.g.,
-https://firstfrc.blob.core.windows.net/frc2024/FieldAssets/2024LayoutMarkingDiagram.pdf).
+ASSUMPTIONS:
+- CSV files are in the SAME directory as this Python file
+- Output JSON files will be written to the SAME directory
 """
 
 import csv
@@ -24,152 +15,145 @@ import math
 import argparse
 
 from wpimath import geometry, units
-from json import encoder
-
 import numpy as np
 
-def convert_apriltag_layouts(fmap = False):
+
+def convert_apriltag_layouts(fmap=False):
     fieldLengthMeters = 17.548
     fieldWidthMeters = 8.052
 
-    # Find AprilTag field layout CSVs
+    # --- Absolute directory of THIS SCRIPT ---
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    print("Working directory:", script_dir)
+
+    # Find CSV files in the same directory
     filenames = [
-        os.path.join(dp, f)
-        for dp, dn, fn in os.walk(".")
-        for f in fn
-        if f.endswith(".csv")
+        os.path.join(script_dir, f)
+        for f in os.listdir(script_dir)
+        if f.lower().endswith(".csv")
     ]
 
+    if not filenames:
+        print("ERROR: No CSV files found in script directory.")
+        return
+
     for filename in filenames:
-        json_data = {"tags": [], "field": {"length": fieldLengthMeters, "width": fieldWidthMeters}}
-        fmap_data = {"type": "frc", "fiducials": []}
+        json_data = {
+            "tags": [],
+            "field": {
+                "length": fieldLengthMeters,
+                "width": fieldWidthMeters
+            }
+        }
+
+        fmap_data = {
+            "type": "frc",
+            "fiducials": []
+        }
 
         tags = []
-        xMin = 0.0
-        xMax = fieldLengthMeters
-        yMin = 0.0
-        yMax = fieldWidthMeters
+        xMin, xMax = 0.0, fieldLengthMeters
+        yMin, yMax = 0.0, fieldWidthMeters
 
-        # Read CSV and fill in JSON data
+        # --- Read CSV ---
         with open(filename, newline="") as csvfile:
-            reader = csv.reader(csvfile, delimiter=",")
-
-            # Skip header
-            next(reader)
+            reader = csv.reader(csvfile)
+            next(reader)  # skip header
 
             for row in reader:
-                # Unpack row elements
                 id = int(row[0])
                 x = float(row[1])
                 y = float(row[2])
                 z = float(row[3])
-                zRotation = float(row[4])
-                yRotation = float(row[5])
+                zRot = float(row[4])
+                yRot = float(row[5])
 
-                xMeters = units.inchesToMeters(x)
-                yMeters = units.inchesToMeters(y)
-                zMeters = units.inchesToMeters(z)
+                xM = units.inchesToMeters(x)
+                yM = units.inchesToMeters(y)
+                zM = units.inchesToMeters(z)
 
-                if(xMeters < xMin):
-                    xMin = xMeters
-                if(xMeters > xMax):
-                    xMax = xMeters
-                if(yMeters < yMin):
-                    yMin = yMeters
-                if(yMeters > yMax):
-                    yMax = yMeters
+                xMin, xMax = min(xMin, xM), max(xMax, xM)
+                yMin, yMax = min(yMin, yM), max(yMax, yM)
 
-                tags.append(
-                    {
-                        "id": id,
-                        "xMeters": xMeters,
-                        "yMeters": yMeters,
-                        "zMeters": zMeters,
-                        "zRotation": zRotation,
-                        "yRotation": yRotation
-                    }
-                )
+                tags.append((id, xM, yM, zM, zRot, yRot))
 
-        for tag in tags:
-            id = tag["id"]
-            xMeters = tag["xMeters"]
-            yMeters = tag["yMeters"]
-            zMeters = tag["zMeters"]
-            zRotation = tag["zRotation"]
-            yRotation = tag["yRotation"]
-
-            # Turn yaw/pitch into quaternion
+        for id, xM, yM, zM, zRot, yRot in tags:
             q = geometry.Rotation3d(
-                units.radians(0),
-                units.degreesToRadians(yRotation),
-                units.degreesToRadians(zRotation),
+                0.0,
+                units.degreesToRadians(yRot),
+                units.degreesToRadians(zRot),
             ).getQuaternion()
 
-            json_data["tags"].append(
-                {
-                    "ID": id,
-                    "pose": {
-                        "translation": {
-                            "x": xMeters,
-                            "y": yMeters,
-                            "z": zMeters,
-                        },
-                        "rotation": {
-                            "quaternion": {
-                                "W": q.W(),
-                                "X": q.X(),
-                                "Y": q.Y(),
-                                "Z": q.Z(),
-                            }
-                        },
+            json_data["tags"].append({
+                "ID": id,
+                "pose": {
+                    "translation": {"x": xM, "y": yM, "z": zM},
+                    "rotation": {
+                        "quaternion": {
+                            "W": q.W(),
+                            "X": q.X(),
+                            "Y": q.Y(),
+                            "Z": q.Z(),
+                        }
                     },
-                }
-            )
+                },
+            })
 
-            zRotationCos = math.cos(units.degreesToRadians(zRotation))
-            zRotationSin = math.sin(units.degreesToRadians(zRotation))
-            yRotationCos = math.cos(units.degreesToRadians(yRotation))
-            yRotationSin = math.sin(units.degreesToRadians(yRotation))
+            zRad = units.degreesToRadians(zRot)
+            yRad = units.degreesToRadians(yRot)
 
-            xMetersFromCenter = xMeters - ((xMax - xMin) / 2) - xMin
-            yMetersFromCenter = yMeters - ((yMax - yMin) / 2) - yMin
-            zMetersFromCenter = zMeters
+            zCos, zSin = math.cos(zRad), math.sin(zRad)
+            yCos, ySin = math.cos(yRad), math.sin(yRad)
 
-            zMatrix = ([zRotationCos, -zRotationSin, 0, xMetersFromCenter],
-                       [zRotationSin,  zRotationCos, 0, yMetersFromCenter],
-                       [           0,             0, 1, zMetersFromCenter],
-                       [           0,             0, 0,                 1])
+            xC = xM - ((xMax - xMin) / 2) - xMin
+            yC = yM - ((yMax - yMin) / 2) - yMin
 
-            yMatrix = ([ yRotationCos, 0, yRotationSin, 0],
-                       [            0, 1,            0, 0],
-                       [-yRotationSin, 0, yRotationCos, 0],
-                       [            0, 0,            0, 1])
+            zMatrix = np.array([
+                [zCos, -zSin, 0, xC],
+                [zSin,  zCos, 0, yC],
+                [0,        0, 1, zM],
+                [0,        0, 0, 1],
+            ])
 
-            transform = np.array(zMatrix).dot(np.array(yMatrix))
+            yMatrix = np.array([
+                [ yCos, 0, ySin, 0],
+                [    0, 1,    0, 0],
+                [-ySin, 0, yCos, 0],
+                [    0, 0,    0, 1],
+            ])
 
-            fmap_data["fiducials"].append(
-                {
-                    "family": "apriltag3_36h11_classic",
-                    "id": id,
-                    "size": 165.1,
-                    "transform": transform.ravel().tolist(),
-                    "unique": 1
-                }
-            )
+            transform = zMatrix @ yMatrix
 
-        # Write JSON
-        with open("../src/main/deploy/"+filename.replace(".csv", ".json"), "w") as f:
+            fmap_data["fiducials"].append({
+                "family": "apriltag3_36h11_classic",
+                "id": id,
+                "size": 165.1,
+                "transform": transform.ravel().tolist(),
+                "unique": 1,
+            })
+
+        # --- Write output to SAME directory ---
+        base = os.path.splitext(os.path.basename(filename))[0]
+        json_path = os.path.join(script_dir, base + ".json")
+
+        with open(json_path, "w") as f:
             json.dump(json_data, f, indent=2)
             f.write("\n")
-        # Write FMAP
-        if (fmap):
-            with open("./"+filename.replace(".csv", ".fmap"), "w") as f:
+
+        print("Wrote JSON:", json_path)
+
+        if fmap:
+            fmap_path = os.path.join(script_dir, base + ".fmap")
+            with open(fmap_path, "w") as f:
                 json.dump(fmap_data, f, indent=2)
                 f.write("\n")
+            print("Wrote FMAP:", fmap_path)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-f', '--fmap', action='store_true', default=False)
+    parser.add_argument("-f", "--fmap", action="store_true")
     args = parser.parse_args()
+
     convert_apriltag_layouts(args.fmap)
