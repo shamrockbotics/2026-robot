@@ -22,39 +22,34 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import java.util.Queue;
 import java.util.function.DoubleSupplier;
 
-/**
- * Module IO implementation using Spark MAX for both drive and turn motors, and a CTRE CANCoder for
- * the turn angle.
- */
+/** Spark drive motor + Spark turn motor CTRE CANcoder used ONLY for absolute reference */
 public class ModuleIOSparkCANCoder implements ModuleIO {
+
   private final Rotation2d zeroRotation;
 
-  // Hardware objects
   private final SparkBase driveSpark;
   private final SparkBase turnSpark;
-  private final RelativeEncoder driveEncoder;
-  private final CANcoder turnCANCoder;
 
-  // Closed-loop controllers
+  private final RelativeEncoder driveEncoder;
+  private final RelativeEncoder turnEncoder;
+
   private final SparkClosedLoopController driveController;
   private final SparkClosedLoopController turnController;
 
-  // Queues for odometry
+  private final CANcoder turnCANCoder;
+
   private final Queue<Double> timestampQueue;
   private final Queue<Double> drivePositionQueue;
   private final Queue<Double> turnPositionQueue;
 
-  // Debouncers
   private final Debouncer driveConnectedDebounce =
       new Debouncer(0.5, Debouncer.DebounceType.kFalling);
+
   private final Debouncer turnConnectedDebounce =
       new Debouncer(0.5, Debouncer.DebounceType.kFalling);
-  private boolean sparkStickyFault = false;
-
-  // CANCoder configuration
-  private final CANcoderConfiguration cancoderConfig = new CANcoderConfiguration();
 
   public ModuleIOSparkCANCoder(int module, int turnEncoderCanId) {
+
     zeroRotation =
         switch (module) {
           case 0 -> frontLeftZeroRotation;
@@ -64,172 +59,168 @@ public class ModuleIOSparkCANCoder implements ModuleIO {
           default -> Rotation2d.kZero;
         };
 
-    // Spark motors
     driveSpark = new SparkFlex(getDriveCanId(module), MotorType.kBrushless);
     turnSpark = new SparkFlex(getTurnCanId(module), MotorType.kBrushless);
+
     driveEncoder = driveSpark.getEncoder();
+    turnEncoder = turnSpark.getEncoder();
+
     driveController = driveSpark.getClosedLoopController();
     turnController = turnSpark.getClosedLoopController();
 
-    // Configure CANCoder
     turnCANCoder = new CANcoder(turnEncoderCanId);
-    cancoderConfig.MagnetSensor.MagnetOffset = getTurnOffset(module);
-    cancoderConfig.MagnetSensor.SensorDirection =
-        turnEncoderInverted
-            ? com.ctre.phoenix6.signals.SensorDirectionValue.Clockwise_Positive
-            : com.ctre.phoenix6.signals.SensorDirectionValue.CounterClockwise_Positive;
-    turnCANCoder.getConfigurator().apply(cancoderConfig);
+    CANcoderConfiguration cfg = new CANcoderConfiguration();
+    cfg.MagnetSensor.MagnetOffset = zeroRotation.getDegrees();
+    turnCANCoder.getConfigurator().apply(cfg);
 
-    // Configure motors
     configureDriveMotor();
     configureTurnMotor();
+    resetTurnToAbsolute();
 
-    // Odometry queues
     timestampQueue = SparkOdometryThread.getInstance().makeTimestampQueue();
     drivePositionQueue =
         SparkOdometryThread.getInstance().registerSignal(driveSpark, driveEncoder::getPosition);
+
     turnPositionQueue =
-        SparkOdometryThread.getInstance()
-            .registerSignal(turnSpark, () -> turnCANCoder.getAbsolutePosition().getValueAsDouble());
-  }
-
-  private int getDriveCanId(int module) {
-    return switch (module) {
-      case 0 -> frontLeftDriveCanId;
-      case 1 -> frontRightDriveCanId;
-      case 2 -> backLeftDriveCanId;
-      case 3 -> backRightDriveCanId;
-      default -> 0;
-    };
-  }
-
-  private int getTurnCanId(int module) {
-    return switch (module) {
-      case 0 -> frontLeftTurnCanId;
-      case 1 -> frontRightTurnCanId;
-      case 2 -> backLeftTurnCanId;
-      case 3 -> backRightTurnCanId;
-      default -> 0;
-    };
-  }
-
-  private double getTurnOffset(int module) {
-    return switch (module) {
-      case 0 -> frontLeftZeroRotation.getDegrees();
-      case 1 -> frontRightZeroRotation.getDegrees();
-      case 2 -> backLeftZeroRotation.getDegrees();
-      case 3 -> backRightZeroRotation.getDegrees();
-      default -> 0.0;
-    };
+        SparkOdometryThread.getInstance().registerSignal(turnSpark, turnEncoder::getPosition);
   }
 
   private void configureDriveMotor() {
-    var driveConfig = new SparkFlexConfig();
-    driveConfig
-        .idleMode(IdleMode.kBrake)
+    var cfg = new SparkFlexConfig();
+    cfg.idleMode(IdleMode.kBrake)
         .smartCurrentLimit(driveMotorCurrentLimit)
         .voltageCompensation(12.0);
-    driveConfig
-        .encoder
+
+    cfg.encoder
         .positionConversionFactor(driveEncoderPositionFactor)
-        .velocityConversionFactor(driveEncoderVelocityFactor)
-        .uvwMeasurementPeriod(10)
-        .uvwAverageDepth(2);
-    driveConfig
-        .closedLoop
+        .velocityConversionFactor(driveEncoderVelocityFactor);
+
+    cfg.closedLoop
         .feedbackSensor(com.revrobotics.spark.FeedbackSensor.kPrimaryEncoder)
         .pid(driveKp, 0.0, driveKd);
+
     tryUntilOk(
         driveSpark,
         5,
         () ->
             driveSpark.configure(
-                driveConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters));
-    tryUntilOk(driveSpark, 5, () -> driveEncoder.setPosition(0.0));
+                cfg, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters));
+
+    driveEncoder.setPosition(0.0);
   }
 
   private void configureTurnMotor() {
-    var turnConfig = new SparkMaxConfig();
-    turnConfig
-        .inverted(turnInverted)
+    var cfg = new SparkMaxConfig();
+    cfg.inverted(turnInverted)
         .idleMode(IdleMode.kBrake)
         .smartCurrentLimit(turnMotorCurrentLimit)
         .voltageCompensation(12.0);
-    turnConfig
-        .absoluteEncoder
-        .inverted(turnEncoderInverted)
-        .positionConversionFactor(turnEncoderPositionFactor)
-        .velocityConversionFactor(turnEncoderVelocityFactor)
-        .averageDepth(2);
-    turnConfig
-        .closedLoop
-        .feedbackSensor(com.revrobotics.spark.FeedbackSensor.kAbsoluteEncoder)
+
+    cfg.encoder
+        .positionConversionFactor(turnEncoderPositionFactor / 6.75)
+        .velocityConversionFactor(turnEncoderVelocityFactor);
+
+    cfg.closedLoop
+        .feedbackSensor(com.revrobotics.spark.FeedbackSensor.kPrimaryEncoder)
         .positionWrappingEnabled(true)
         .positionWrappingInputRange(turnPIDMinInput, turnPIDMaxInput)
         .pid(turnKp, 0.0, turnKd);
+
     tryUntilOk(
         turnSpark,
         5,
         () ->
             turnSpark.configure(
-                turnConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters));
+                cfg, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters));
+  }
+
+  private void resetTurnToAbsolute() {
+    double absRad =
+        Math.toRadians(turnCANCoder.getAbsolutePosition().getValueAsDouble() * 360.0)
+            - zeroRotation.getRadians();
+
+    turnEncoder.setPosition(MathUtil.inputModulus(absRad, turnPIDMinInput, turnPIDMaxInput));
   }
 
   @Override
   public void updateInputs(ModuleIOInputs inputs) {
-    // Drive inputs
+
     ifOk(driveSpark, driveEncoder::getPosition, val -> inputs.drivePositionRad = val);
+
     ifOk(driveSpark, driveEncoder::getVelocity, val -> inputs.driveVelocityRadPerSec = val);
+
     ifOk(
         driveSpark,
         new DoubleSupplier[] {driveSpark::getAppliedOutput, driveSpark::getBusVoltage},
-        vals -> inputs.driveAppliedVolts = vals[0] * vals[1]);
-    ifOk(driveSpark, driveSpark::getOutputCurrent, val -> inputs.driveCurrentAmps = val);
-    inputs.driveConnected = driveConnectedDebounce.calculate(!sparkStickyFault);
+        v -> inputs.driveAppliedVolts = v[0] * v[1]);
 
-    // Turn inputs from CANCoder
-    inputs.turnPosition =
-        Rotation2d.fromRotations(turnCANCoder.getAbsolutePosition().getValueAsDouble());
-    inputs.turnVelocityRadPerSec = 0; // Optional: can implement if needed
+    inputs.driveConnected = driveConnectedDebounce.calculate(true);
+
+    inputs.turnPosition = Rotation2d.fromRadians(turnEncoder.getPosition());
+
     inputs.turnAppliedVolts = turnSpark.getAppliedOutput() * turnSpark.getBusVoltage();
-    inputs.turnCurrentAmps = turnSpark.getOutputCurrent();
+
     inputs.turnConnected = turnConnectedDebounce.calculate(true);
 
-    // Odometry
     inputs.odometryTimestamps = timestampQueue.stream().mapToDouble(d -> d).toArray();
+
     inputs.odometryDrivePositionsRad = drivePositionQueue.stream().mapToDouble(d -> d).toArray();
+
     inputs.odometryTurnPositions =
-        turnPositionQueue.stream().map(d -> Rotation2d.fromRotations(d)).toArray(Rotation2d[]::new);
+        turnPositionQueue.stream().map(Rotation2d::fromRadians).toArray(Rotation2d[]::new);
+
     timestampQueue.clear();
     drivePositionQueue.clear();
     turnPositionQueue.clear();
   }
 
   @Override
-  public void setDriveOpenLoop(double output) {
-    driveSpark.setVoltage(output);
+  public void setDriveOpenLoop(double volts) {
+    driveSpark.setVoltage(volts);
   }
 
   @Override
-  public void setTurnOpenLoop(double output) {
-    turnSpark.setVoltage(output);
+  public void setTurnOpenLoop(double volts) {
+    turnSpark.setVoltage(volts);
   }
 
   @Override
   public void setDriveVelocity(double velocityRadPerSec) {
-    double ffVolts = driveKs * Math.signum(velocityRadPerSec) + driveKv * velocityRadPerSec;
+    double ff = driveKs * Math.signum(velocityRadPerSec) + driveKv * velocityRadPerSec;
+
     driveController.setSetpoint(
         velocityRadPerSec,
-        com.revrobotics.spark.SparkBase.ControlType.kVelocity,
+        SparkBase.ControlType.kVelocity,
         ClosedLoopSlot.kSlot0,
-        ffVolts,
-        com.revrobotics.spark.SparkClosedLoopController.ArbFFUnits.kVoltage);
+        ff,
+        SparkClosedLoopController.ArbFFUnits.kVoltage);
   }
 
   @Override
   public void setTurnPosition(Rotation2d rotation) {
     double setpoint =
         MathUtil.inputModulus(rotation.getRadians(), turnPIDMinInput, turnPIDMaxInput);
-    turnController.setSetpoint(setpoint, com.revrobotics.spark.SparkBase.ControlType.kPosition);
+
+    turnController.setSetpoint(setpoint, SparkBase.ControlType.kPosition);
+  }
+
+  private int getDriveCanId(int module) {
+    return switch (module) {
+      case 3 -> frontLeftDriveCanId;
+      case 2 -> frontRightDriveCanId;
+      case 1 -> backLeftDriveCanId;
+      case 0 -> backRightDriveCanId;
+      default -> 0;
+    };
+  }
+
+  private int getTurnCanId(int module) {
+    return switch (module) {
+      case 3 -> frontLeftTurnCanId;
+      case 2 -> frontRightTurnCanId;
+      case 1 -> backLeftTurnCanId;
+      case 0 -> backRightTurnCanId;
+      default -> 0;
+    };
   }
 }

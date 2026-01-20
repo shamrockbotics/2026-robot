@@ -25,7 +25,7 @@ import frc.robot.subsystems.drive.GyroIO;
 import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
-import frc.robot.subsystems.drive.ModuleIOSpark;
+import frc.robot.subsystems.drive.ModuleIOSparkCANCoder;
 import frc.robot.subsystems.vision.*;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
@@ -60,13 +60,21 @@ public class RobotContainer {
         //         new ModuleIOTalonFX(TunerConstants.FrontRight),
         //         new ModuleIOTalonFX(TunerConstants.BackLeft),
         //         new ModuleIOTalonFX(TunerConstants.BackRight));
+        // CASE SPARK
+        // drive =
+        //     new Drive(
+        //         new GyroIOPigeon2(),
+        //         new ModuleIOSpark(0),
+        //         new ModuleIOSpark(1),
+        //         new ModuleIOSpark(2),
+        //         new ModuleIOSpark(3));
         drive =
             new Drive(
                 new GyroIOPigeon2(),
-                new ModuleIOSpark(0),
-                new ModuleIOSpark(1),
-                new ModuleIOSpark(2),
-                new ModuleIOSpark(3));
+                new ModuleIOSparkCANCoder(0, 4),
+                new ModuleIOSparkCANCoder(1, 3),
+                new ModuleIOSparkCANCoder(2, 2),
+                new ModuleIOSparkCANCoder(3, 1));
         vision =
             new Vision(
                 drive::addVisionMeasurement, new VisionIOPhotonVision(camera0Name, robotToCamera0));
