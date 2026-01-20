@@ -20,7 +20,7 @@ public class ModuleIOboth {
         DoubleSupplier ySup,
         DoubleSupplier rotSup,
         BooleanSupplier robotRelativeSup) {
-      this.drive = drive;
+      this.drive= drive;
       this.xSup = xSup;
       this.ySup = ySup;
       this.rotSup = rotSup;
