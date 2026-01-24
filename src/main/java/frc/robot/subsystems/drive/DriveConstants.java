@@ -29,10 +29,14 @@ public class DriveConstants {
       };
 
   // Zeroed rotation values for each module, see setup instructions
-  public static final Rotation2d frontLeftZeroRotation = new Rotation2d(0.0);
-  public static final Rotation2d frontRightZeroRotation = new Rotation2d(0.0);
-  public static final Rotation2d backLeftZeroRotation = new Rotation2d(0.0);
-  public static final Rotation2d backRightZeroRotation = new Rotation2d(0.0);
+  public static final Rotation2d frontLeftZeroRotation =
+      new Rotation2d(Units.degreesToRadians(97.82));
+  public static final Rotation2d frontRightZeroRotation =
+      new Rotation2d(Units.degreesToRadians(70.22));
+  public static final Rotation2d backLeftZeroRotation =
+      new Rotation2d(Units.degreesToRadians(244.66));
+  public static final Rotation2d backRightZeroRotation =
+      new Rotation2d(Units.degreesToRadians(125.14));
 
   // Device CAN IDs
   public static final int pigeonCanId = 9;
@@ -50,20 +54,20 @@ public class DriveConstants {
   // Drive motor configuration
   public static final int driveMotorCurrentLimit = 50;
   public static final double wheelRadiusMeters = Units.inchesToMeters(2);
-  public static final double driveMotorReduction  = 6.75;
+  public static final double driveMotorReduction = 6.75;
+
   public enum DriveRatio {
-  FAST_5_90(5.90),
-  MEDIUM_6_75(6.75),
-  SLOW_7_75(7.75);
+    FAST_5_90(5.90),
+    MEDIUM_6_75(6.75),
+    SLOW_7_75(7.75);
 
-  public final double reduction;
+    public final double reduction;
 
-  DriveRatio(double reduction) {
-    this.reduction = reduction;
-  }
-};
-  
-      
+    DriveRatio(double reduction) {
+      this.reduction = reduction;
+    }
+  };
+
   public static final DCMotor driveGearbox = DCMotor.getNeoVortex(4);
 
   // Drive encoder configuration
@@ -75,7 +79,7 @@ public class DriveConstants {
   // Wheel Rad/Sec
 
   // Drive PID configuration
-  public static final double driveKp = 0.2;
+  public static final double driveKp = 0.0;
   public static final double driveKd = 0.0;
   public static final double driveKs = 0.0;
   public static final double driveKv = 0.1;
@@ -85,7 +89,7 @@ public class DriveConstants {
   public static final double driveSimKv = 0.0789;
 
   // Turn motor configuration
-  public static final boolean turnInverted = false;
+  public static final boolean turnInverted = true;
   public static final int turnMotorCurrentLimit = 20;
   public static final double turnMotorReduction = 9424.0 / 203.0;
   public static final DCMotor turnGearbox = DCMotor.getNeo550(1);
@@ -97,7 +101,7 @@ public class DriveConstants {
 
   // Turn PID configuration
   public static final double turnKp = 2.0;
-  public static final double turnKd = 0.0;
+  public static final double turnKd = 2.0;
   public static final double turnSimP = 8.0;
   public static final double turnSimD = 0.0;
   public static final double turnPIDMinInput = 0; // Radians

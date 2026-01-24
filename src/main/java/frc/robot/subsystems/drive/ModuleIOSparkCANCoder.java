@@ -70,7 +70,8 @@ public class ModuleIOSparkCANCoder implements ModuleIO {
 
     turnCANCoder = new CANcoder(turnEncoderCanId);
     CANcoderConfiguration cfg = new CANcoderConfiguration();
-    cfg.MagnetSensor.MagnetOffset = zeroRotation.getDegrees();
+    cfg.MagnetSensor.MagnetOffset = 0.0; // zeroRotation.getDegrees();
+
     turnCANCoder.getConfigurator().apply(cfg);
 
     configureDriveMotor();
@@ -117,8 +118,8 @@ public class ModuleIOSparkCANCoder implements ModuleIO {
         .voltageCompensation(12.0);
 
     cfg.encoder
-        .positionConversionFactor(turnEncoderPositionFactor / 6.75)
-        .velocityConversionFactor(turnEncoderVelocityFactor);
+        .positionConversionFactor(turnEncoderPositionFactor / (150 / 7))
+        .velocityConversionFactor(turnEncoderVelocityFactor / (150 / 7));
 
     cfg.closedLoop
         .feedbackSensor(com.revrobotics.spark.FeedbackSensor.kPrimaryEncoder)
@@ -144,6 +145,7 @@ public class ModuleIOSparkCANCoder implements ModuleIO {
 
   @Override
   public void updateInputs(ModuleIOInputs inputs) {
+    resetTurnToAbsolute();
 
     ifOk(driveSpark, driveEncoder::getPosition, val -> inputs.drivePositionRad = val);
 
@@ -200,7 +202,6 @@ public class ModuleIOSparkCANCoder implements ModuleIO {
   public void setTurnPosition(Rotation2d rotation) {
     double setpoint =
         MathUtil.inputModulus(rotation.getRadians(), turnPIDMinInput, turnPIDMaxInput);
-
     turnController.setSetpoint(setpoint, SparkBase.ControlType.kPosition);
   }
 
