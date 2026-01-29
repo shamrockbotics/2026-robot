@@ -16,7 +16,7 @@ import edu.wpi.first.math.util.Units;
 
 public class DriveConstants {
   public static final double maxSpeedMetersPerSec = 4.8;
-  public static final double odometryFrequency = 100.0; // Hz
+  public static final double odometryFrequency = 50.0; // Hz
   public static final double trackWidth = Units.inchesToMeters(26.5);
   public static final double wheelBase = Units.inchesToMeters(26.5);
   public static final double driveBaseRadius = Math.hypot(trackWidth / 2.0, wheelBase / 2.0);
@@ -30,13 +30,13 @@ public class DriveConstants {
 
   // Zeroed rotation values for each module, see setup instructions
   public static final Rotation2d frontLeftZeroRotation =
-      new Rotation2d(Units.degreesToRadians(97.82));
+      new Rotation2d(Units.degreesToRadians(278.79));
   public static final Rotation2d frontRightZeroRotation =
-      new Rotation2d(Units.degreesToRadians(70.22));
+      new Rotation2d(Units.degreesToRadians(242.31));
   public static final Rotation2d backLeftZeroRotation =
-      new Rotation2d(Units.degreesToRadians(244.66));
+      new Rotation2d(Units.degreesToRadians(56.78));
   public static final Rotation2d backRightZeroRotation =
-      new Rotation2d(Units.degreesToRadians(125.14));
+      new Rotation2d(Units.degreesToRadians(308.58));
 
   // Device CAN IDs
   public static final int pigeonCanId = 9;
@@ -55,20 +55,8 @@ public class DriveConstants {
   public static final int driveMotorCurrentLimit = 50;
   public static final double wheelRadiusMeters = Units.inchesToMeters(2);
   public static final double driveMotorReduction = 6.75;
-
-  public enum DriveRatio {
-    FAST_5_90(5.90),
-    MEDIUM_6_75(6.75),
-    SLOW_7_75(7.75);
-
-    public final double reduction;
-
-    DriveRatio(double reduction) {
-      this.reduction = reduction;
-    }
-  };
-
-  public static final DCMotor driveGearbox = DCMotor.getNeoVortex(4);
+  // and 22 spur teeth
+  public static final DCMotor driveGearbox = DCMotor.getNeoVortex(1);
 
   // Drive encoder configuration
   public static final double driveEncoderPositionFactor =
