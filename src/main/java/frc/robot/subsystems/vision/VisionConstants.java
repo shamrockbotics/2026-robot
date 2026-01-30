@@ -11,6 +11,7 @@ import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Filesystem;
 
 public class VisionConstants {
@@ -28,7 +29,11 @@ public class VisionConstants {
   // Robot to camera transforms
   // (Not used by Limelight, configure in web UI instead)
   public static Transform3d robotToCamera0 =
-      new Transform3d(0.2, 0.0, 0.2, new Rotation3d(Math.PI / 2, -0.4, 0.0));
+      new Transform3d(
+          Units.inchesToMeters(-7),
+          Units.inchesToMeters(3),
+          Units.inchesToMeters(20),
+          new Rotation3d(3 * Math.PI / 2, 0.0, Math.PI));
   public static Transform3d robotToCamera1 =
       new Transform3d(-0.2, 0.0, 0.2, new Rotation3d(0.0, -0.4, Math.PI));
 
