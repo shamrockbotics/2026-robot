@@ -9,6 +9,7 @@ package frc.robot.subsystems.drive;
 
 import static edu.wpi.first.units.Units.*;
 import static frc.robot.subsystems.drive.DriveConstants.*;
+import static frc.robot.subsystems.vision.VisionConstants.*;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
@@ -18,9 +19,11 @@ import com.pathplanner.lib.util.PathPlannerLogging;
 import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.hal.HAL;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -64,6 +67,11 @@ public class Drive extends SubsystemBase {
       };
   private SwerveDrivePoseEstimator poseEstimator =
       new SwerveDrivePoseEstimator(kinematics, rawGyroRotation, lastModulePositions, Pose2d.kZero);
+  // Whether we've used vision to initialize the odometry yet
+  private boolean visionPoseInitialized = false;
+  // Scale factor applied to vision measurement standard deviations when applying
+  // manual corrections (larger = less trust in vision corrections)
+  private double visionStdDevScale = 5.0;
 
   public Drive(
       GyroIO gyroIO,
@@ -295,13 +303,154 @@ public class Drive extends SubsystemBase {
     poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), pose);
   }
 
-  /** Adds a new timestamped vision measurement. */
+  /** Adds a new timestamped vision measurement. Only used to initialize odometry once. */
   public void addVisionMeasurement(
       Pose2d visionRobotPoseMeters,
       double timestampSeconds,
       Matrix<N3, N1> visionMeasurementStdDevs) {
-    poseEstimator.addVisionMeasurement(
-        visionRobotPoseMeters, timestampSeconds, visionMeasurementStdDevs);
+    // Only accept vision on startup: if we've already initialized, ignore
+    // subsequent vision updates entirely (per request).
+    odometryLock.lock();
+    try {
+      if (visionPoseInitialized) {
+        // Ignore periodic vision updates after initialization
+        return;
+      }
+
+      // Check reliability of the vision measurement using provided std devs.
+      // Matrix layout: [linearX; linearY; angular]
+      double linearStd = visionMeasurementStdDevs.get(0, 0);
+      double angularStd = visionMeasurementStdDevs.get(2, 0);
+
+      if (linearStd > visionInitMaxLinearStdDevMeters
+          || angularStd > visionInitMaxAngularStdDevRadians) {
+        // Measurement not reliable enough to initialize odometry
+        Logger.recordOutput("Odometry/VisionInitRejected/LinearStd", linearStd);
+        Logger.recordOutput("Odometry/VisionInitRejected/AngularStd", angularStd);
+        return;
+      }
+
+      // Accept and set initial pose
+      poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), visionRobotPoseMeters);
+      visionPoseInitialized = true;
+      Logger.recordOutput("Odometry/VisionInitialized", true);
+    } finally {
+      odometryLock.unlock();
+    }
+  }
+
+  /**
+   * Manually apply a vision measurement to the odometry. This can be used from a command or a
+   * dashboard button to force a vision correction at a controlled time. By default the method
+   * enforces the same reliability/proximity checks as automatic initialization; set {@code
+   * forceApply} to true to bypass checks.
+   *
+   * @param visionRobotPoseMeters pose reported by vision
+   * @param timestampSeconds timestamp of the measurement (seconds)
+   * @param visionMeasurementStdDevs measurement standard deviations (N3x1)
+   * @param forceApply if true, bypass proximity/reliability checks and apply
+   */
+  public void driveToPose(Pose3d tagPose) {
+    double offsetDistance = 1.0; // Distance in FRONT of the tag (tunable)
+
+    // Convert tag pose to 2D
+    Pose2d tagPose2d = tagPose.toPose2d();
+    Pose2d currentPose = getPose();
+
+    // Compute offset in the direction the tag is facing
+    double offsetX = offsetDistance * Math.cos(tagPose2d.getRotation().getRadians());
+    double offsetY = offsetDistance * Math.sin(tagPose2d.getRotation().getRadians());
+
+    // Target pose = tag pose + forward offset
+    Pose2d targetPose2d =
+        new Pose2d(tagPose2d.getX() + offsetX, tagPose2d.getY() + offsetY, tagPose2d.getRotation());
+
+    // Control gains
+    double kP = 2.0;
+    double kPRotation = 4.0;
+
+    System.out.println("Target Pose (in front): " + targetPose2d);
+    System.out.println("Current Pose: " + currentPose);
+
+    // Calculate errors
+    double xError = targetPose2d.getX() - currentPose.getX();
+    double yError = targetPose2d.getY() - currentPose.getY();
+    double rotationError =
+        targetPose2d
+            .getRotation()
+            .minus(currentPose.getRotation())
+            .minus(Rotation2d.kPi)
+            .getRadians();
+
+    // Compute speed commands
+    double xSpeed = kP * xError;
+    double ySpeed = kP * yError;
+    double rotSpeed = kPRotation * rotationError;
+
+    // Clamp speeds
+    xSpeed =
+        MathUtil.clamp(xSpeed, -getMaxLinearSpeedMetersPerSec(), getMaxLinearSpeedMetersPerSec());
+    ySpeed =
+        MathUtil.clamp(ySpeed, -getMaxLinearSpeedMetersPerSec(), getMaxLinearSpeedMetersPerSec());
+    rotSpeed =
+        MathUtil.clamp(rotSpeed, -getMaxAngularSpeedRadPerSec(), getMaxAngularSpeedRadPerSec());
+
+    // Convert to field-relative speeds and drive
+    ChassisSpeeds speeds =
+        ChassisSpeeds.fromFieldRelativeSpeeds(xSpeed, ySpeed, rotSpeed, getRotation());
+    System.out.println("Commanded Speeds: " + speeds);
+
+    runVelocity(speeds);
+  }
+
+  public void applyVisionMeasurementNow(
+      Pose2d visionRobotPoseMeters,
+      double timestampSeconds,
+      Matrix<N3, N1> visionMeasurementStdDevs,
+      boolean forceApply) {
+    odometryLock.lock();
+    try {
+      // If not initialized yet, allow initialization (respecting reliability
+      // unless forceApply is true).
+      if (!visionPoseInitialized) {
+        double linearStd = visionMeasurementStdDevs.get(0, 0);
+        double angularStd = visionMeasurementStdDevs.get(2, 0);
+        if (!forceApply
+            && (linearStd > visionInitMaxLinearStdDevMeters
+                || angularStd > visionInitMaxAngularStdDevRadians)) {
+          Logger.recordOutput("Odometry/VisionInitRejected/LinearStd", linearStd);
+          Logger.recordOutput("Odometry/VisionInitRejected/AngularStd", angularStd);
+          return;
+        }
+
+        poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), visionRobotPoseMeters);
+        visionPoseInitialized = true;
+        Logger.recordOutput("Odometry/VisionInitializedManual", true);
+        return;
+      }
+
+      // Already initialized: either enforce proximity checks or apply directly
+      if (!forceApply) {
+        Pose2d currentPose = poseEstimator.getEstimatedPosition();
+        double dist =
+            currentPose.getTranslation().getDistance(visionRobotPoseMeters.getTranslation());
+        double angleDiff =
+            Math.abs(
+                currentPose.getRotation().minus(visionRobotPoseMeters.getRotation()).getRadians());
+        if (dist > maxVisionPoseDistanceMeters || angleDiff > maxVisionPoseAngleRadians) {
+          Logger.recordOutput("Odometry/VisionRejectedManual/Distance", dist);
+          Logger.recordOutput("Odometry/VisionRejectedManual/Angle", angleDiff);
+          return;
+        }
+      }
+
+      // Apply as a low-gain correction (scale std devs to reduce influence)
+      Matrix<N3, N1> scaledStdDevs = visionMeasurementStdDevs.times(visionStdDevScale);
+      poseEstimator.addVisionMeasurement(visionRobotPoseMeters, timestampSeconds, scaledStdDevs);
+      Logger.recordOutput("Odometry/VisionAppliedManually", true);
+    } finally {
+      odometryLock.unlock();
+    }
   }
 
   /** Returns the maximum linear speed in meters per sec. */

@@ -22,6 +22,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.vision.VisionIO.PoseObservationType;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.OptionalInt;
 import org.littletonrobotics.junction.Logger;
 
 public class Vision extends SubsystemBase {
@@ -49,6 +50,17 @@ public class Vision extends SubsystemBase {
     }
   }
 
+  public OptionalInt returnNearestTagID(int cameraIndex) {
+    if (inputs[cameraIndex] != null
+        && inputs[cameraIndex].tagIds != null
+        && inputs[cameraIndex].tagIds.length > 0) {
+
+      System.out.println(OptionalInt.of(inputs[cameraIndex].tagIds[0]));
+      return OptionalInt.of(inputs[cameraIndex].tagIds[0]);
+    } else {
+      return OptionalInt.empty();
+    }
+  }
   /**
    * Returns the X angle to the best target, which can be used for simple servoing with vision.
    *
@@ -174,5 +186,46 @@ public class Vision extends SubsystemBase {
         Pose2d visionRobotPoseMeters,
         double timestampSeconds,
         Matrix<N3, N1> visionMeasurementStdDevs);
+  }
+
+  /** Simple container for a vision measurement (pose, timestamp, std devs). */
+  public static class VisionMeasurement {
+    public final Pose2d pose;
+    public final double timestamp;
+    public final Matrix<N3, N1> stdDevs;
+
+    public VisionMeasurement(Pose2d pose, double timestamp, Matrix<N3, N1> stdDevs) {
+      this.pose = pose;
+      this.timestamp = timestamp;
+      this.stdDevs = stdDevs;
+    }
+  }
+
+  /**
+   * Returns the most recent vision measurement seen by any camera (best-effort). This does not
+   * perform the same rejection checks used during periodic processing — it simply returns the first
+   * available observation so a user can manually apply it if desired.
+   */
+  public VisionMeasurement getLatestVisionMeasurement() {
+    for (int cameraIndex = 0; cameraIndex < io.length; cameraIndex++) {
+      if (inputs[cameraIndex].poseObservations.length > 0) {
+        var obs = inputs[cameraIndex].poseObservations[0];
+        // Compute std devs using same baseline formula as periodic
+        double stdDevFactor = Math.pow(obs.averageTagDistance(), 2.0) / Math.max(1, obs.tagCount());
+        double linearStdDev = linearStdDevBaseline * stdDevFactor;
+        double angularStdDev = angularStdDevBaseline * stdDevFactor;
+        if (obs.type() == PoseObservationType.MEGATAG_2) {
+          linearStdDev *= linearStdDevMegatag2Factor;
+          angularStdDev *= angularStdDevMegatag2Factor;
+        }
+        if (cameraIndex < cameraStdDevFactors.length) {
+          linearStdDev *= cameraStdDevFactors[cameraIndex];
+          angularStdDev *= cameraStdDevFactors[cameraIndex];
+        }
+        Matrix<N3, N1> std = VecBuilder.fill(linearStdDev, linearStdDev, angularStdDev);
+        return new VisionMeasurement(obs.pose().toPose2d(), obs.timestamp(), std);
+      }
+    }
+    return null;
   }
 }
