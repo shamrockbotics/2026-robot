@@ -7,8 +7,6 @@
 
 package frc.robot;
 
-import static frc.robot.subsystems.vision.VisionConstants.*;
-
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -20,13 +18,15 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
 import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.KrakenTestConfig;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIO;
 import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
-import frc.robot.subsystems.drive.ModuleIOSparkCANCoder;
-import frc.robot.subsystems.vision.*;
+import frc.robot.subsystems.drive.ModuleIOTalonFX;
+import frc.robot.subsystems.mechanism.*;
+import frc.robot.subsystems.roller.*;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 /**
@@ -37,8 +37,8 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
  */
 public class RobotContainer {
   // Subsystems
-  private final Vision vision;
   private final Drive drive;
+  private final Roller test;
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
@@ -53,31 +53,14 @@ public class RobotContainer {
         // Real robot, instantiate hardware IO implementations
         // ModuleIOTalonFX is intended for modules with TalonFX drive, TalonFX turn, and
         // a CANcoder
-        // drive =
-        //     new Drive(
-        //         new GyroIOPigeon2(),
-        //         new ModuleIOTalonFX(TunerConstants.FrontLeft),
-        //         new ModuleIOTalonFX(TunerConstants.FrontRight),
-        //         new ModuleIOTalonFX(TunerConstants.BackLeft),
-        //         new ModuleIOTalonFX(TunerConstants.BackRight));
-        // CASE SPARK
-        // drive =
-        //     new Drive(
-        //         new GyroIOPigeon2(),
-        //         new ModuleIOSpark(0),
-        //         new ModuleIOSpark(1),
-        //         new ModuleIOSpark(2),
-        //         new ModuleIOSpark(3));
         drive =
             new Drive(
                 new GyroIOPigeon2(),
-                new ModuleIOSparkCANCoder(0, 4),
-                new ModuleIOSparkCANCoder(1, 3),
-                new ModuleIOSparkCANCoder(2, 2),
-                new ModuleIOSparkCANCoder(3, 1));
-        vision =
-            new Vision(
-                drive::addVisionMeasurement, new VisionIOPhotonVision(camera0Name, robotToCamera0));
+                new ModuleIOTalonFX(TunerConstants.FrontLeft),
+                new ModuleIOTalonFX(TunerConstants.FrontRight),
+                new ModuleIOTalonFX(TunerConstants.BackLeft),
+                new ModuleIOTalonFX(TunerConstants.BackRight));
+        test = new Roller(new KrakenTestConfig());
 
         // The ModuleIOTalonFXS implementation provides an example implementation for
         // TalonFXS controller connected to a CANdi with a PWM encoder. The
@@ -107,11 +90,7 @@ public class RobotContainer {
                 new ModuleIOSim(TunerConstants.FrontRight),
                 new ModuleIOSim(TunerConstants.BackLeft),
                 new ModuleIOSim(TunerConstants.BackRight));
-        vision =
-            new Vision(
-                drive::addVisionMeasurement,
-                new VisionIOPhotonVisionSim(camera0Name, robotToCamera0, drive::getPose));
-
+        test = new Roller(new KrakenTestConfig(false));
         break;
 
       default:
@@ -123,7 +102,7 @@ public class RobotContainer {
                 new ModuleIO() {},
                 new ModuleIO() {},
                 new ModuleIO() {});
-        vision = new Vision(drive::addVisionMeasurement, new VisionIO() {});
+        test = new Roller(new KrakenTestConfig(){});
         break;
     }
 
@@ -161,9 +140,9 @@ public class RobotContainer {
     drive.setDefaultCommand(
         DriveCommands.joystickDrive(
             drive,
-            () -> controller.getLeftY(),
-            () -> controller.getLeftX(),
-            () -> controller.getRightX()));
+            () -> -controller.getLeftY(),
+            () -> -controller.getLeftX(),
+            () -> -controller.getRightX()));
 
     // Lock to 0° when A button is held
     controller
@@ -188,6 +167,7 @@ public class RobotContainer {
                             new Pose2d(drive.getPose().getTranslation(), Rotation2d.kZero)),
                     drive)
                 .ignoringDisable(true));
+    controller.rightTrigger().whileTrue(test.releaseCommand());
   }
 
   /**
