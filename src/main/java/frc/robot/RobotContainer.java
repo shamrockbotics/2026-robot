@@ -18,7 +18,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
 import frc.robot.generated.TunerConstants;
-import frc.robot.subsystems.KrakenTestConfig;
+import frc.robot.subsystems.*;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIO;
 import frc.robot.subsystems.drive.GyroIOPigeon2;
@@ -38,7 +38,12 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 public class RobotContainer {
   // Subsystems
   private final Drive drive;
-  private final Roller test;
+  private final Roller climber;
+  private final Roller shooterRoller;
+  private final Roller intakeRoller;
+  private final Mechanism shooterHood;
+  private final Roller shooterTransfer;
+  private final Roller spindexer;
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
@@ -60,7 +65,12 @@ public class RobotContainer {
                 new ModuleIOTalonFX(TunerConstants.FrontRight),
                 new ModuleIOTalonFX(TunerConstants.BackLeft),
                 new ModuleIOTalonFX(TunerConstants.BackRight));
-        test = new Roller(new KrakenTestConfig());
+        climber = new Roller(new ClimberConfig());
+        shooterRoller = new Roller(new ShooterRollerConfig());
+        intakeRoller = new Roller(new IntakeRollerConfig());
+        shooterHood = new Mechanism(new ShooterHoodConfig());
+        shooterTransfer = new Roller(new ShooterTransferConfig());
+        spindexer = new Roller(new SpindexerConfig());
 
         // The ModuleIOTalonFXS implementation provides an example implementation for
         // TalonFXS controller connected to a CANdi with a PWM encoder. The
@@ -90,7 +100,12 @@ public class RobotContainer {
                 new ModuleIOSim(TunerConstants.FrontRight),
                 new ModuleIOSim(TunerConstants.BackLeft),
                 new ModuleIOSim(TunerConstants.BackRight));
-        test = new Roller(new KrakenTestConfig(false));
+        climber = new Roller(new ClimberConfig(false));
+        shooterRoller = new Roller(new ShooterRollerConfig(false));
+        intakeRoller = new Roller(new IntakeRollerConfig(false));
+        shooterHood = new Mechanism(new ShooterHoodConfig(false));
+        shooterTransfer = new Roller(new ShooterTransferConfig(false));
+        spindexer = new Roller(new SpindexerConfig(false));
         break;
 
       default:
@@ -102,7 +117,12 @@ public class RobotContainer {
                 new ModuleIO() {},
                 new ModuleIO() {},
                 new ModuleIO() {});
-        test = new Roller(new KrakenTestConfig(){});
+        climber = new Roller(new ClimberConfig() {});
+        shooterRoller = new Roller(new ShooterRollerConfig() {});
+        intakeRoller = new Roller(new IntakeRollerConfig() {});
+        shooterHood = new Mechanism(new ShooterHoodConfig() {});
+        shooterTransfer = new Roller(new ShooterTransferConfig() {});
+        spindexer = new Roller(new SpindexerConfig() {});
         break;
     }
 
@@ -167,7 +187,6 @@ public class RobotContainer {
                             new Pose2d(drive.getPose().getTranslation(), Rotation2d.kZero)),
                     drive)
                 .ignoringDisable(true));
-    controller.rightTrigger().whileTrue(test.releaseCommand());
   }
 
   /**
