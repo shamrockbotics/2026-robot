@@ -11,10 +11,10 @@ public class SpindexerConfig extends RollerConfig {
 
   public SpindexerConfig(boolean real) {
     name = "Spindexer";
-    intakePercent = 0.2;
-    releasePercent = 0.6;
+    intakePercent = 0.1;
+    releasePercent = 0.1;
     if (real) {
-      io = new RollerIOSparkFlex(16, true, false, 2 * Math.PI, 2 * Math.PI / 60, 40, 0.5, 0.0);
+      io = new RollerIOSparkFlex(16, false, false, .25, .25, 40, 0.002, 0.0);
     } else {
       io = new RollerIOSim(1, (2.0 * Math.PI / 4096));
     }

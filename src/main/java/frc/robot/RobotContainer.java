@@ -28,6 +28,7 @@ import frc.robot.subsystems.drive.ModuleIOTalonFX;
 import frc.robot.subsystems.mechanism.*;
 import frc.robot.subsystems.roller.*;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
+import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -50,6 +51,7 @@ public class RobotContainer {
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
+  private final LoggedNetworkNumber shooterVelocity;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -128,7 +130,7 @@ public class RobotContainer {
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
-
+    shooterVelocity = new LoggedNetworkNumber("/Tuning/ShooterVelocity", 0.0);
     // Set up SysId routines
     autoChooser.addOption(
         "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
@@ -160,11 +162,12 @@ public class RobotContainer {
     drive.setDefaultCommand(
         DriveCommands.joystickDrive(
             drive,
-            () -> -controller.getLeftY(),
-            () -> -controller.getLeftX(),
+            () -> controller.getLeftY(),
+            () -> controller.getLeftX(),
             () -> -controller.getRightX()));
 
     // Lock to 0° when A button is held
+
     controller
         .a()
         .whileTrue(
@@ -187,6 +190,26 @@ public class RobotContainer {
                             new Pose2d(drive.getPose().getTranslation(), Rotation2d.kZero)),
                     drive)
                 .ignoringDisable(true));
+    controller.rightTrigger().whileTrue(climber.intakeCommand());
+    controller.leftTrigger().whileTrue(climber.releaseCommand());
+    controller.rightBumper().whileTrue(spindexer.intakeCommand());
+    // controller
+    //     .rightBumper()
+    //     .whileTrue(
+    //         Commands.run(
+    //             () -> {
+    //               spindexer.run(.1);
+    //             }));
+    controller.rightBumper().whileTrue(shooterTransfer.intakeCommand());
+    controller.leftBumper().whileTrue(intakeRoller.intakeCommand());
+    controller
+        .rightBumper()
+        .whileTrue(
+            Commands.run(
+                () -> {
+                  shooterRoller.runAtVelocity(-shooterVelocity.getAsDouble());
+                }));
+    // controller.y().whileTrue(shooterRoller.intakeCommand());
   }
 
   /**

@@ -2,8 +2,8 @@ package frc.robot.subsystems.roller;
 
 import static frc.robot.util.SparkUtil.*;
 
-import com.revrobotics.AbsoluteEncoder;
 import com.revrobotics.PersistMode;
+import com.revrobotics.RelativeEncoder;
 import com.revrobotics.ResetMode;
 import com.revrobotics.spark.FeedbackSensor;
 import com.revrobotics.spark.SparkBase.ControlType;
@@ -19,7 +19,7 @@ public class RollerIOSparkFlex implements RollerIO {
 
   // Hardware objects
   private final SparkFlex spark;
-  private final AbsoluteEncoder encoder;
+  private final RelativeEncoder encoder;
 
   // Closed loop controllers
   private final SparkClosedLoopController controller;
@@ -73,7 +73,7 @@ public class RollerIOSparkFlex implements RollerIO {
       double velocityKp,
       double velocityKd) {
     spark = new SparkFlex(id, MotorType.kBrushless);
-    encoder = spark.getAbsoluteEncoder();
+    encoder = spark.getEncoder();
     controller = spark.getClosedLoopController();
 
     SparkFlexConfig sparkConfig = new SparkFlexConfig();
@@ -90,9 +90,7 @@ public class RollerIOSparkFlex implements RollerIO {
         .averageDepth(2);
     sparkConfig
         .closedLoop
-        .feedbackSensor(FeedbackSensor.kAbsoluteEncoder)
-        .positionWrappingEnabled(true)
-        .positionWrappingInputRange(0, 2 * Math.PI)
+        .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
         .pid(velocityKp, 0.0, velocityKd);
     sparkConfig
         .signals

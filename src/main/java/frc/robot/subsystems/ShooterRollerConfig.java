@@ -11,8 +11,8 @@ public class ShooterRollerConfig extends RollerConfig {
 
   public ShooterRollerConfig(boolean real) {
     name = "Shooter Roller";
-    intakePercent = 0.6; // Intake and release need to be inverted whenever we get a chance
-    releasePercent = 0.6;
+    intakePercent = 0.5; // Intake and release need to be inverted whenever we get a chance
+    releasePercent = 0.4;
     if (real) {
       io = new RollerIOTalonFX(11, 12, false, 12, 0.5, 0.0);
     } else {

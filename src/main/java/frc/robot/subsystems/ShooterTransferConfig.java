@@ -11,7 +11,7 @@ public class ShooterTransferConfig extends RollerConfig {
 
   public ShooterTransferConfig(boolean real) {
     name = "Shooter Transfer";
-    intakePercent = 0.2;
+    intakePercent = 0.5;
     releasePercent = 0.6;
     if (real) {
       io = new RollerIOSparkFlex(15, true, false, 2 * Math.PI, 2 * Math.PI / 60, 40, 0.5, 0.0);

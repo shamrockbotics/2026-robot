@@ -8,7 +8,8 @@ import com.ctre.phoenix6.signals.MotorAlignmentValue;
 
 public class RollerIOTalonFX implements RollerIO {
   private final TalonFX talon;
-  private final VelocityVoltage velocityVoltage;
+  private final VelocityVoltage velocityVoltage = new VelocityVoltage(0.0);
+  ;
 
   public RollerIOTalonFX(
       int id1,
@@ -32,7 +33,6 @@ public class RollerIOTalonFX implements RollerIO {
   public RollerIOTalonFX(
       int id1, boolean motorInverted, double voltageLimit, double velocityKp, double velocityKd) {
     talon = new TalonFX(id1);
-    velocityVoltage = new VelocityVoltage(0).withSlot(0);
     TalonFXConfiguration configs = new TalonFXConfiguration();
     configs.Slot0.kP = velocityKp;
     configs.Slot0.kD = velocityKd;
@@ -49,7 +49,8 @@ public class RollerIOTalonFX implements RollerIO {
 
   @Override
   public void setVelocity(double rotationsPerSecond) {
-    talon.setControl(velocityVoltage.withVelocity(rotationsPerSecond));
+    double rotationsPerMinute = rotationsPerSecond / 60;
+    talon.setControl(velocityVoltage.withVelocity(rotationsPerMinute));
   }
 
   @Override
