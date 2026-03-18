@@ -42,10 +42,10 @@ public class Roller extends SubsystemBase {
   /**
    * Runs the intake to the desired velocity.
    *
-   * @param metersPerSec target velocity
+   * @param value target velocity
    */
-  public void runAtVelocity(double metersPerSec) {
-    io.setVelocity(metersPerSec);
+  public void runAtVelocity(double value) {
+    io.setVelocity(value);
   }
 
   /**
@@ -68,7 +68,7 @@ public class Roller extends SubsystemBase {
 
   /** Returns the current angle of the arm in radians. */
   public double getSpeedMetersPerSec() {
-    return inputs.velocityMetersPerSec;
+    return inputs.velocity;
   }
 
   /** Returns true if the arm angle is within the allowed error of the target angle. */

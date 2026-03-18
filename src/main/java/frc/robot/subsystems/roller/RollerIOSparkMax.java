@@ -116,7 +116,7 @@ public class RollerIOSparkMax implements RollerIO {
   public void updateInputs(RollerIOInputs inputs) {
     // Update inputs
     sparkStickyFault = false;
-    ifOk(spark, encoder::getVelocity, (value) -> inputs.velocityMetersPerSec = value);
+    ifOk(spark, encoder::getVelocity, (value) -> inputs.velocity = value);
     ifOk(
         spark,
         new DoubleSupplier[] {spark::getAppliedOutput, spark::getBusVoltage},

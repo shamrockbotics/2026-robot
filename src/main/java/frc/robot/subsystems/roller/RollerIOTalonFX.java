@@ -44,7 +44,7 @@ public class RollerIOTalonFX implements RollerIO {
 
   @Override
   public void updateInputs(RollerIOInputs inputs) {
-    inputs.velocityMetersPerSec = talon.getVelocity().getValueAsDouble();
+    inputs.velocity = talon.getVelocity().getValueAsDouble();
   }
 
   @Override

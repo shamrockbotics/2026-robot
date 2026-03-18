@@ -83,11 +83,9 @@ public class RollerIOSparkFlex implements RollerIO {
         .smartCurrentLimit(currentLimit)
         .voltageCompensation(maxVoltage);
     sparkConfig
-        .absoluteEncoder
-        .inverted(encoderInverted)
+        .encoder
         .positionConversionFactor(encoderPositionFactor)
-        .velocityConversionFactor(encoderVelocityFactor)
-        .averageDepth(2);
+        .velocityConversionFactor(encoderVelocityFactor);
     sparkConfig
         .closedLoop
         .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
@@ -113,7 +111,7 @@ public class RollerIOSparkFlex implements RollerIO {
   public void updateInputs(RollerIOInputs inputs) {
     // Update inputs
     sparkStickyFault = false;
-    ifOk(spark, encoder::getVelocity, (value) -> inputs.velocityMetersPerSec = value);
+    ifOk(spark, encoder::getVelocity, (value) -> inputs.velocity = value);
     ifOk(
         spark,
         new DoubleSupplier[] {spark::getAppliedOutput, spark::getBusVoltage},
@@ -123,8 +121,8 @@ public class RollerIOSparkFlex implements RollerIO {
   }
 
   @Override
-  public void setVelocity(double metersPerSec) {
-    controller.setSetpoint(metersPerSec, ControlType.kVelocity);
+  public void setVelocity(double value) {
+    controller.setSetpoint(value, ControlType.kVelocity);
   }
 
   @Override
