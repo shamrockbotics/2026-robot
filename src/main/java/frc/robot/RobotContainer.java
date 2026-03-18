@@ -7,6 +7,7 @@
 
 package frc.robot;
 
+import com.fasterxml.jackson.databind.util.Named;
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -17,6 +18,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
+// NamedCommands moved to an inner static stub below
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.*;
 import frc.robot.subsystems.drive.Drive;
@@ -48,7 +50,7 @@ public class RobotContainer {
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
-
+  private final CommandXboxController operatorController = new CommandXboxController(1);
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
   private final LoggedNetworkNumber shooterVelocity;
@@ -146,9 +148,16 @@ public class RobotContainer {
         "Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
     autoChooser.addOption(
         "Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
-
+autoChooser.addOption( "2 cycle shooting auto right side", AutoSequences.twoBallAutoRight(drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
+autoChooser.addOption( "2 cycle shooting auto left side", AutoSequences.twoBallAutoLeft(drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
+autoChooser.addOption("Climb Auto", AutoSequences.climbAuto(drive, climber));
+autoChooser.addOption ("Center to shoot to depot to shoot left side", AutoSequences.centerToShootToDepotToShootLeft(drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
     // Configure the button bindings
     configureButtonBindings();
+  
+    NamedCommands.registerCommands("Intake", intakeRoller.intakeCommand());
+    NamedCommands.registerCommands("Release", shooterTransfer.intakeCommand());
+    NamedCommands.registerCommands("Climb Tower", climber.intakeCommand());
   }
 
   /**
@@ -209,8 +218,8 @@ public class RobotContainer {
                 () -> {
                   shooterRoller.runAtVelocity(-shooterVelocity.getAsDouble());
                 }));
-    // controller.y().whileTrue(shooterRoller.intakeCommand());
-  }
+
+  } // end configureButtonBindings
 
   /**
    * Use this to pass the autonomous command to the main {@link Robot} class.
@@ -220,4 +229,48 @@ public class RobotContainer {
   public Command getAutonomousCommand() {
     return autoChooser.get();
   }
+
+
+  private static class AutoSequences {
+    public static Command twoBallAutoRight(
+        Drive drive,
+        Mechanism shooterHood,
+        Roller shooterRoller,
+        Roller shooterTransfer,
+        Roller spindexer,
+        Roller intakeRoller) {
+      return Commands.none();
+    }
+
+    public static Command twoBallAutoLeft(
+        Drive drive,
+        Mechanism shooterHood,
+        Roller shooterRoller,
+        Roller shooterTransfer,
+        Roller spindexer,
+        Roller intakeRoller) {
+      return Commands.none();
+    }
+
+    public static Command climbAuto(Drive drive, Roller climber) {
+      return Commands.none();
+    }
+
+    public static Command centerToShootToDepotToShootLeft(
+        Drive drive,
+        Mechanism shooterHood,
+        Roller shooterRoller,
+        Roller shooterTransfer,
+        Roller spindexer,
+        Roller intakeRoller) {
+      return Commands.none();
+    }
+  }
+
+  private static class NamedCommands {
+    public static void registerCommands(String name, Command command) {
+      
+    }
+  }
 }
+  
