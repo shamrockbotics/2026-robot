@@ -6,7 +6,7 @@ public interface RollerIO {
   @AutoLog
   public static class RollerIOInputs {
     public boolean connected = false;
-    public double velocityMetersPerSec = 0.0;
+    public double velocity = 0.0;
     public boolean hasObject = false;
     public double appliedVolts = 0.0;
     public double currentAmps = 0.0;
@@ -18,8 +18,8 @@ public interface RollerIO {
   public default void updateInputs(RollerIOInputs inputs) {}
 
   /** Run the intake at the specified velocity. */
-  public default void setVelocity(double metersPerSec) {}
+  public default void setVelocity(double value) {}
 
   /** Run open loop at the specified output in the range [-1, 1]. */
-  public default void setOutput(double output) {}
+  public default void setOutput(double vaue) {}
 }
