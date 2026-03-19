@@ -30,23 +30,24 @@ public class MechanismIOTalonFX implements MechanismIO {
   private double maxVoltage = 12.0;
   private double setpoint = 0.0;
 
-  private final double encoderPositionFactor; 
-  private final double zeroOffset;            
+  private final double encoderPositionFactor;
+  private final double zeroOffset;
   private final boolean encoderInverted;
 
   /**
    * Creates a MechanismIOTalonFX using a duty-cycle encoder wired to the RIO.
    *
-   * @param talonId           CAN ID of the TalonFX (Kraken)
-   * @param encoderChannel    DIO channel on the RIO the encoder signal wire is connected to
-   * @param zeroOffset        Raw encoder reading
-   * @param motorInverted     Whether the motor output should be inverted
-   * @param encoderInverted   Whether the encoder direction should be inverted
-   * @param encoderPositionFactor  Converts encoder rotations → mechanism units (e.g. 2*PI for radians)
-   * @param currentLimit      Stator current limit in amps
-   * @param voltageLimit      Voltage Limit
-   * @param kP                P Value
-   * @param kD                D Value
+   * @param talonId CAN ID of the TalonFX (Kraken)
+   * @param encoderChannel DIO channel on the RIO the encoder signal wire is connected to
+   * @param zeroOffset Raw encoder reading
+   * @param motorInverted Whether the motor output should be inverted
+   * @param encoderInverted Whether the encoder direction should be inverted
+   * @param encoderPositionFactor Converts encoder rotations → mechanism units (e.g. 2*PI for
+   *     radians)
+   * @param currentLimit Stator current limit in amps
+   * @param voltageLimit Voltage Limit
+   * @param kP P Value
+   * @param kD D Value
    */
   public MechanismIOTalonFX(
       int talonId,
@@ -89,7 +90,6 @@ public class MechanismIOTalonFX implements MechanismIO {
     encoder = new DutyCycleEncoder(encoderChannel);
   }
 
-
   public MechanismIOTalonFX addFeedforward(ArmFeedforward feedforward) {
     this.armFeedforward = feedforward;
     return this;
@@ -104,7 +104,6 @@ public class MechanismIOTalonFX implements MechanismIO {
     positionOffsetSupplier = supplier;
   }
 
-
   @Override
   public void updateInputs(MechanismIOInputs inputs) {
     boolean encoderConnected = encoder.isConnected();
@@ -115,12 +114,9 @@ public class MechanismIOTalonFX implements MechanismIO {
       inputs.velocity = 0.0;
     }
 
-    inputs.appliedVolts =
-        talon.getMotorVoltage().getValueAsDouble();
-    inputs.appliedOutput =
-        talon.getDutyCycle().getValueAsDouble();
-    inputs.currentAmps =
-        talon.getStatorCurrent().getValueAsDouble();
+    inputs.appliedVolts = talon.getMotorVoltage().getValueAsDouble();
+    inputs.appliedOutput = talon.getDutyCycle().getValueAsDouble();
+    inputs.currentAmps = talon.getStatorCurrent().getValueAsDouble();
 
     inputs.targetPosition = setpoint;
   }
@@ -134,9 +130,7 @@ public class MechanismIOTalonFX implements MechanismIO {
 
     double talonSetpointRotations = mechanismUnitsToTalonRotations(position);
     talon.setControl(
-        positionVoltage
-            .withPosition(talonSetpointRotations)
-            .withFeedForward(feedforward));
+        positionVoltage.withPosition(talonSetpointRotations).withFeedForward(feedforward));
   }
 
   @Override

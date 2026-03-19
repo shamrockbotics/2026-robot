@@ -45,9 +45,11 @@ public class RobotContainer {
   private final Mechanism shooterHood;
   private final Roller shooterTransfer;
   private final Roller spindexer;
+  private final Mechanism intakePivot;
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
+  private final CommandXboxController operatorController = new CommandXboxController(1);
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
@@ -73,6 +75,7 @@ public class RobotContainer {
         shooterHood = new Mechanism(new ShooterHoodConfig());
         shooterTransfer = new Roller(new ShooterTransferConfig());
         spindexer = new Roller(new SpindexerConfig());
+        intakePivot = new Mechanism(new IntakePivotConfig());
 
         // The ModuleIOTalonFXS implementation provides an example implementation for
         // TalonFXS controller connected to a CANdi with a PWM encoder. The
@@ -108,6 +111,7 @@ public class RobotContainer {
         shooterHood = new Mechanism(new ShooterHoodConfig(false));
         shooterTransfer = new Roller(new ShooterTransferConfig(false));
         spindexer = new Roller(new SpindexerConfig(false));
+        intakePivot = new Mechanism(new IntakePivotConfig(false));
         break;
 
       default:
@@ -125,12 +129,13 @@ public class RobotContainer {
         shooterHood = new Mechanism(new ShooterHoodConfig() {});
         shooterTransfer = new Roller(new ShooterTransferConfig() {});
         spindexer = new Roller(new SpindexerConfig() {});
+        intakePivot = new Mechanism(new IntakePivotConfig() {});
         break;
     }
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
-    shooterVelocity = new LoggedNetworkNumber("/Tuning/ShooterVelocity", 0.0);
+    shooterVelocity = new LoggedNetworkNumber("/Tuning/ShooterVelocity", 1000.0);
     // Set up SysId routines
     autoChooser.addOption(
         "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
@@ -190,9 +195,9 @@ public class RobotContainer {
                             new Pose2d(drive.getPose().getTranslation(), Rotation2d.kZero)),
                     drive)
                 .ignoringDisable(true));
-    controller.rightTrigger().whileTrue(climber.intakeCommand());
-    controller.leftTrigger().whileTrue(climber.releaseCommand());
-    controller.rightBumper().whileTrue(spindexer.intakeCommand());
+    controller.rightBumper().whileTrue(climber.intakeCommand());
+    controller.leftBumper().whileTrue(climber.releaseCommand());
+    operatorController.rightBumper().whileTrue(spindexer.releaseCommand());
     // controller
     //     .rightBumper()
     //     .whileTrue(
@@ -200,15 +205,39 @@ public class RobotContainer {
     //             () -> {
     //               spindexer.run(.1);
     //             }));
-    controller.rightBumper().whileTrue(shooterTransfer.intakeCommand());
-    controller.leftBumper().whileTrue(intakeRoller.intakeCommand());
-    controller
-        .rightBumper()
+    operatorController.rightTrigger().whileTrue(spindexer.intakeCommand());
+    operatorController.rightTrigger().whileTrue(shooterTransfer.intakeCommand());
+    // controller
+    //     .leftBumper()
+    //         Commands.run(
+    //     .whileTrue(
+    //             () -> {
+    //               shooterRoller.runAtVelocity(shooterVelocity.getAsDouble());
+    //             }));
+    operatorController.rightTrigger().whileTrue(shooterRoller.intakeCommand());
+    operatorController.leftBumper().whileTrue(intakeRoller.releaseCommand());
+    operatorController.leftTrigger().whileTrue(intakeRoller.intakeCommand());
+    operatorController
+        .a()
         .whileTrue(
             Commands.run(
                 () -> {
-                  shooterRoller.runAtVelocity(-shooterVelocity.getAsDouble());
+                  intakePivot.runToPosition(2);
                 }));
+    operatorController
+        .y()
+        .whileTrue(
+            Commands.run(
+                () -> {
+                  intakePivot.run(-0.3);
+                }));
+    // controller
+    //     .b()
+    //     .whileTrue(
+    //         Commands.run(
+    //             () -> {
+    //               intakePivot.run(0.1);
+    //             }));
     // controller.y().whileTrue(shooterRoller.intakeCommand());
   }
 

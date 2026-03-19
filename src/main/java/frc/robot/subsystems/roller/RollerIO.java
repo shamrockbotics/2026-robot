@@ -21,5 +21,5 @@ public interface RollerIO {
   public default void setVelocity(double value) {}
 
   /** Run open loop at the specified output in the range [-1, 1]. */
-  public default void setOutput(double vaue) {}
+  public default void setOutput(double value) {}
 }
