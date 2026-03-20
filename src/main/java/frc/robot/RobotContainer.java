@@ -7,7 +7,8 @@
 
 package frc.robot;
 
-import com.fasterxml.jackson.databind.util.Named;
+import static frc.robot.subsystems.vision.VisionConstants.*;
+
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -29,6 +30,7 @@ import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
 import frc.robot.subsystems.mechanism.*;
 import frc.robot.subsystems.roller.*;
+import frc.robot.subsystems.vision.*;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
@@ -48,6 +50,7 @@ public class RobotContainer {
   private final Roller shooterTransfer;
   private final Roller spindexer;
   private final Mechanism intakePivot;
+  private final Vision vision;
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
@@ -78,6 +81,11 @@ public class RobotContainer {
         shooterTransfer = new Roller(new ShooterTransferConfig());
         spindexer = new Roller(new SpindexerConfig());
         intakePivot = new Mechanism(new IntakePivotConfig());
+        vision =
+            new Vision(
+                drive::addVisionMeasurement,
+                new VisionIOPhotonVision(camera0Name, robotToCamera0),
+                new VisionIOPhotonVision(camera1Name, robotToCamera1));
 
         // The ModuleIOTalonFXS implementation provides an example implementation for
         // TalonFXS controller connected to a CANdi with a PWM encoder. The
@@ -114,6 +122,12 @@ public class RobotContainer {
         shooterTransfer = new Roller(new ShooterTransferConfig(false));
         spindexer = new Roller(new SpindexerConfig(false));
         intakePivot = new Mechanism(new IntakePivotConfig(false));
+        vision =
+            new Vision(
+                drive::addVisionMeasurement,
+                new VisionIOPhotonVision(camera0Name, robotToCamera0),
+                new VisionIOPhotonVision(camera1Name, robotToCamera1));
+
         break;
 
       default:
@@ -132,6 +146,8 @@ public class RobotContainer {
         shooterTransfer = new Roller(new ShooterTransferConfig() {});
         spindexer = new Roller(new SpindexerConfig() {});
         intakePivot = new Mechanism(new IntakePivotConfig() {});
+        vision = new Vision(drive::addVisionMeasurement, new VisionIO() {}, new VisionIO() {});
+
         break;
     }
 
@@ -153,13 +169,22 @@ public class RobotContainer {
         "Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
     autoChooser.addOption(
         "Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
-autoChooser.addOption( "2 cycle shooting auto right side", AutoSequences.twoBallAutoRight(drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
-autoChooser.addOption( "2 cycle shooting auto left side", AutoSequences.twoBallAutoLeft(drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
-autoChooser.addOption("Climb Auto", AutoSequences.climbAuto(drive, climber));
-autoChooser.addOption ("Center to shoot to depot to shoot left side", AutoSequences.centerToShootToDepotToShootLeft(drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
+    autoChooser.addOption(
+        "2 cycle shooting auto right side",
+        AutoSequences.twoBallAutoRight(
+            drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
+    autoChooser.addOption(
+        "2 cycle shooting auto left side",
+        AutoSequences.twoBallAutoLeft(
+            drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
+    autoChooser.addOption("Climb Auto", AutoSequences.climbAuto(drive, climber));
+    autoChooser.addOption(
+        "Center to shoot to depot to shoot left side",
+        AutoSequences.centerToShootToDepotToShootLeft(
+            drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
     // Configure the button bindings
     configureButtonBindings();
-  
+
     NamedCommands.registerCommands("Intake", intakeRoller.intakeCommand());
     NamedCommands.registerCommands("Release", shooterTransfer.intakeCommand());
     NamedCommands.registerCommands("Climb Tower", climber.intakeCommand());
@@ -207,6 +232,9 @@ autoChooser.addOption ("Center to shoot to depot to shoot left side", AutoSequen
     controller.rightBumper().whileTrue(climber.intakeCommand());
     controller.leftBumper().whileTrue(climber.releaseCommand());
     operatorController.rightBumper().whileTrue(spindexer.releaseCommand());
+    controller.rightTrigger().whileTrue(Commands.run(() -> {
+      shooterHood.run(0.05);
+    }));
     // controller
     //     .rightBumper()
     //     .whileTrue(
@@ -216,14 +244,13 @@ autoChooser.addOption ("Center to shoot to depot to shoot left side", AutoSequen
     //             }));
     operatorController.rightTrigger().whileTrue(spindexer.intakeCommand());
     operatorController.rightTrigger().whileTrue(shooterTransfer.intakeCommand());
-    // controller
-    //     .leftBumper()
-    //         Commands.run(
-    //     .whileTrue(
-    //             () -> {
-    //               shooterRoller.runAtVelocity(shooterVelocity.getAsDouble());
-    //             }));
-    operatorController.rightTrigger().whileTrue(shooterRoller.intakeCommand());
+    operatorController
+        .x()
+        .whileTrue(
+            Commands.run(
+                () -> {
+                  shooterRoller.runAtVelocity(shooterVelocity.getAsDouble());
+                }));
     operatorController.leftBumper().whileTrue(intakeRoller.releaseCommand());
     operatorController.leftTrigger().whileTrue(intakeRoller.intakeCommand());
     operatorController
@@ -251,7 +278,6 @@ autoChooser.addOption ("Center to shoot to depot to shoot left side", AutoSequen
   public Command getAutonomousCommand() {
     return autoChooser.get();
   }
-
 
   private static class AutoSequences {
     public static Command twoBallAutoRight(
@@ -290,9 +316,6 @@ autoChooser.addOption ("Center to shoot to depot to shoot left side", AutoSequen
   }
 
   private static class NamedCommands {
-    public static void registerCommands(String name, Command command) {
-      
-    }
+    public static void registerCommands(String name, Command command) {}
   }
 }
-  
