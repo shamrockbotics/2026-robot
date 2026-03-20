@@ -7,8 +7,6 @@
 
 package frc.robot;
 
-import static frc.robot.subsystems.vision.VisionConstants.*;
-
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -33,6 +31,7 @@ import frc.robot.subsystems.roller.*;
 import frc.robot.subsystems.vision.*;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
+import org.littletonrobotics.junction.networktables.LoggedNetworkString;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -59,6 +58,8 @@ public class RobotContainer {
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
   private final LoggedNetworkNumber shooterVelocity;
+  private final LoggedNetworkString team;
+  private final LoggedNetworkNumber idleShooterVelocity;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -154,6 +155,8 @@ public class RobotContainer {
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
     shooterVelocity = new LoggedNetworkNumber("/Tuning/ShooterVelocity", 1000.0);
+    idleShooterVelocity = new LoggedNetworkNumber("/Tuning/IdleShooterVelocity", 500);
+    team = new LoggedNetworkString("/Tuning/Team");
     // Set up SysId routines
     autoChooser.addOption(
         "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
@@ -219,6 +222,8 @@ public class RobotContainer {
     // Switch to X pattern when X button is pressed
     controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
 
+    shooterRoller.runAtVelocity(idleShooterVelocity.getAsDouble());
+
     // Reset gyro to 0° when B button is pressed
     controller
         .b()
@@ -249,8 +254,16 @@ public class RobotContainer {
         .whileTrue(
             Commands.run(
                 () -> {
-                  shooterRoller.runAtVelocity(shooterVelocity.getAsDouble());
+                  shooterRoller.runAtVelocity(getVelocity());
                 }));
+    // controller
+    //     .leftBumper()
+    //         Commands.run(
+    //     .whileTrue(
+    //             () -> {
+    //               shooterRoller.runAtVelocity(shooterVelocity.getAsDouble());
+    //             }));
+    operatorController.rightTrigger().whileTrue(shooterRoller.intakeCommand());
     operatorController.leftBumper().whileTrue(intakeRoller.releaseCommand());
     operatorController.leftTrigger().whileTrue(intakeRoller.intakeCommand());
     operatorController
@@ -275,6 +288,11 @@ public class RobotContainer {
    *
    * @return the command to run in autonomous
    */
+  public double getVelocity() {
+    // Get distance to hub
+    return 0.0;
+  }
+
   public Command getAutonomousCommand() {
     return autoChooser.get();
   }
