@@ -14,7 +14,7 @@ public class ShooterRollerConfig extends RollerConfig {
     intakePercent = 0.2;
     releasePercent = 0.2;
     if (real) {
-      io = new RollerIOTalonFX(11, 12, true, 12, 0.05, 0.0);
+      io = new RollerIOTalonFX(11, 12, true, 12, 0.5, 0.0, 0.15, 0.15);
     } else {
       io = new RollerIOSim(1, (2.0 * Math.PI / 4096));
     }

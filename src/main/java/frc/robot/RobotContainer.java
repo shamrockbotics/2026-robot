@@ -7,7 +7,6 @@
 
 package frc.robot;
 
-import com.fasterxml.jackson.databind.util.Named;
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -31,6 +30,7 @@ import frc.robot.subsystems.mechanism.*;
 import frc.robot.subsystems.roller.*;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
+import org.littletonrobotics.junction.networktables.LoggedNetworkString;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -56,6 +56,8 @@ public class RobotContainer {
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
   private final LoggedNetworkNumber shooterVelocity;
+  private final LoggedNetworkString team;
+  private final LoggedNetworkNumber idleShooterVelocity;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -138,6 +140,8 @@ public class RobotContainer {
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
     shooterVelocity = new LoggedNetworkNumber("/Tuning/ShooterVelocity", 1000.0);
+    idleShooterVelocity = new LoggedNetworkNumber("/Tuning/IdleShooterVelocity", 500);
+    team = new LoggedNetworkString("/Tuning/Team");
     // Set up SysId routines
     autoChooser.addOption(
         "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
@@ -153,13 +157,22 @@ public class RobotContainer {
         "Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
     autoChooser.addOption(
         "Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
-autoChooser.addOption( "2 cycle shooting auto right side", AutoSequences.twoBallAutoRight(drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
-autoChooser.addOption( "2 cycle shooting auto left side", AutoSequences.twoBallAutoLeft(drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
-autoChooser.addOption("Climb Auto", AutoSequences.climbAuto(drive, climber));
-autoChooser.addOption ("Center to shoot to depot to shoot left side", AutoSequences.centerToShootToDepotToShootLeft(drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
+    autoChooser.addOption(
+        "2 cycle shooting auto right side",
+        AutoSequences.twoBallAutoRight(
+            drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
+    autoChooser.addOption(
+        "2 cycle shooting auto left side",
+        AutoSequences.twoBallAutoLeft(
+            drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
+    autoChooser.addOption("Climb Auto", AutoSequences.climbAuto(drive, climber));
+    autoChooser.addOption(
+        "Center to shoot to depot to shoot left side",
+        AutoSequences.centerToShootToDepotToShootLeft(
+            drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
     // Configure the button bindings
     configureButtonBindings();
-  
+
     NamedCommands.registerCommands("Intake", intakeRoller.intakeCommand());
     NamedCommands.registerCommands("Release", shooterTransfer.intakeCommand());
     NamedCommands.registerCommands("Climb Tower", climber.intakeCommand());
@@ -194,6 +207,8 @@ autoChooser.addOption ("Center to shoot to depot to shoot left side", AutoSequen
     // Switch to X pattern when X button is pressed
     controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
 
+    shooterRoller.runAtVelocity(idleShooterVelocity.getAsDouble());
+
     // Reset gyro to 0° when B button is pressed
     controller
         .b()
@@ -216,6 +231,13 @@ autoChooser.addOption ("Center to shoot to depot to shoot left side", AutoSequen
     //             }));
     operatorController.rightTrigger().whileTrue(spindexer.intakeCommand());
     operatorController.rightTrigger().whileTrue(shooterTransfer.intakeCommand());
+    operatorController
+        .x()
+        .whileTrue(
+            Commands.run(
+                () -> {
+                  shooterRoller.runAtVelocity(getVelocity());
+                }));
     // controller
     //     .leftBumper()
     //         Commands.run(
@@ -248,10 +270,14 @@ autoChooser.addOption ("Center to shoot to depot to shoot left side", AutoSequen
    *
    * @return the command to run in autonomous
    */
+  public double getVelocity() {
+    // Get distance to hub
+    return 0.0;
+  }
+
   public Command getAutonomousCommand() {
     return autoChooser.get();
   }
-
 
   private static class AutoSequences {
     public static Command twoBallAutoRight(
@@ -290,9 +316,6 @@ autoChooser.addOption ("Center to shoot to depot to shoot left side", AutoSequen
   }
 
   private static class NamedCommands {
-    public static void registerCommands(String name, Command command) {
-      
-    }
+    public static void registerCommands(String name, Command command) {}
   }
 }
-  

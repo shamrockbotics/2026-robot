@@ -18,15 +18,22 @@ public class RollerIOTalonFX implements RollerIO {
       boolean motorInverted,
       double voltageLimit,
       double velocityKp,
-      double velocityKd) {
-    this(id1, motorInverted, voltageLimit, velocityKp, velocityKd);
+      double velocityKd,
+      double velocityKv,
+      double velocityKa) {
+    this(id1, motorInverted, voltageLimit, velocityKp, velocityKd, velocityKv, velocityKa);
     TalonFX talon2 = new TalonFX(id2);
-
     talon2.setControl(new Follower(id1, MotorAlignmentValue.Opposed));
   }
 
   public RollerIOTalonFX(
-      int id1, boolean motorInverted, double voltageLimit, double velocityKp, double velocityKd) {
+      int id1,
+      boolean motorInverted,
+      double voltageLimit,
+      double velocityKp,
+      double velocityKd,
+      double velocityKv,
+      double velocityKa) {
     talon = new TalonFX(id1);
     TalonFXConfiguration config = new TalonFXConfiguration();
 
@@ -35,6 +42,8 @@ public class RollerIOTalonFX implements RollerIO {
 
     config.Slot0.kP = velocityKp;
     config.Slot0.kD = velocityKd;
+    config.Slot0.kV = velocityKv;
+    config.Slot0.kA = velocityKa;
     config.Voltage.withPeakForwardVoltage(voltageLimit);
     config.Voltage.withPeakReverseVoltage(-voltageLimit);
     talon.getConfigurator().apply(config);
