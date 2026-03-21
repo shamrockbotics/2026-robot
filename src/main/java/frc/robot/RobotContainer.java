@@ -10,6 +10,8 @@ package frc.robot;
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -30,7 +32,6 @@ import frc.robot.subsystems.mechanism.*;
 import frc.robot.subsystems.roller.*;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
-import org.littletonrobotics.junction.networktables.LoggedNetworkString;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -56,7 +57,6 @@ public class RobotContainer {
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
   private final LoggedNetworkNumber shooterVelocity;
-  private final LoggedNetworkString team;
   private final LoggedNetworkNumber idleShooterVelocity;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
@@ -141,7 +141,6 @@ public class RobotContainer {
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
     shooterVelocity = new LoggedNetworkNumber("/Tuning/ShooterVelocity", 1000.0);
     idleShooterVelocity = new LoggedNetworkNumber("/Tuning/IdleShooterVelocity", 500);
-    team = new LoggedNetworkString("/Tuning/Team");
     // Set up SysId routines
     autoChooser.addOption(
         "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
@@ -236,7 +235,7 @@ public class RobotContainer {
         .whileTrue(
             Commands.run(
                 () -> {
-                  shooterRoller.runAtVelocity(getVelocity());
+                  shooterRoller.runAtVelocity(getTargetVelocity());
                 }));
     // controller
     //     .leftBumper()
@@ -270,9 +269,24 @@ public class RobotContainer {
    *
    * @return the command to run in autonomous
    */
-  public double getVelocity() {
-    // Get distance to hub
-    return 0.0;
+  public double getTargetVelocity() {
+    double x_error = 0;
+    double y_error = 0;
+    if(DriverStation.getAlliance().equals(DriverStation.Alliance.Red)){
+      x_error = Math.abs(drive.getPose().getX() - 12);
+      y_error = Math.abs(drive.getPose().getY() - 4);
+    }
+    else if(DriverStation.getAlliance().equals(DriverStation.Alliance.Blue)){
+      x_error = Math.abs(drive.getPose().getX() - 4.5);
+      y_error = Math.abs(drive.getPose().getY()-4);
+    }
+    else{
+      System.out.println("Team not found shooter back to custom value");
+      return shooterVelocity.getAsDouble();
+    }
+    double distance = Units.metersToInches(Math.sqrt(Math.pow(x_error, 2) + Math.pow(y_error, 2)));
+    return (4.77*distance+853);
+
   }
 
   public Command getAutonomousCommand() {
