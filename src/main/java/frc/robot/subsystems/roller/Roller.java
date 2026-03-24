@@ -16,6 +16,7 @@ public class Roller extends SubsystemBase {
   private final double releasePercent;
 
   private final Alert disconnectedAlert;
+  public Command runAtVelocity;
 
   public Roller(RollerConfig config) {
     setName(config.name);
@@ -89,7 +90,11 @@ public class Roller extends SubsystemBase {
     return run(() -> run(intakePercent)).withName("Intake");
   }
 
+  public Command runAtVelocityCommand(double velocity) {
+    return run(() -> runAtVelocity(velocity)).withName("Release");
+  }
+
   public Command releaseCommand() {
-    return run(() -> run(-releasePercent)).withName("Release");
+    return run(() -> run(releasePercent)).withName("Release");
   }
 }

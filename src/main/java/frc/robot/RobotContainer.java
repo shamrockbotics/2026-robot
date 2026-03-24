@@ -7,9 +7,13 @@
 
 package frc.robot;
 
+import static frc.robot.subsystems.vision.VisionConstants.*;
+
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.auto.NamedCommands;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -17,7 +21,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
-// NamedCommands moved to an inner static stub below
+import frc.robot.commands.FuelCommands;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.*;
 import frc.robot.subsystems.drive.Drive;
@@ -31,7 +35,6 @@ import frc.robot.subsystems.roller.*;
 import frc.robot.subsystems.vision.*;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
-import org.littletonrobotics.junction.networktables.LoggedNetworkString;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -49,7 +52,8 @@ public class RobotContainer {
   private final Roller shooterTransfer;
   private final Roller spindexer;
   private final Mechanism intakePivot;
-  private final Vision vision;
+  private final FuelCommands feulCommands;
+  // private final Vision vision;
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
@@ -58,7 +62,6 @@ public class RobotContainer {
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
   private final LoggedNetworkNumber shooterVelocity;
-  private final LoggedNetworkString team;
   private final LoggedNetworkNumber idleShooterVelocity;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
@@ -82,11 +85,11 @@ public class RobotContainer {
         shooterTransfer = new Roller(new ShooterTransferConfig());
         spindexer = new Roller(new SpindexerConfig());
         intakePivot = new Mechanism(new IntakePivotConfig());
-        vision =
-            new Vision(
-                drive::addVisionMeasurement,
-                new VisionIOPhotonVision(camera0Name, robotToCamera0),
-                new VisionIOPhotonVision(camera1Name, robotToCamera1));
+        // vision =
+        //     new Vision(
+        //         drive::addVisionMeasurement,
+        //         new VisionIOPhotonVision(camera0Name, robotToCamera0),
+        //         new VisionIOPhotonVision(camera1Name, robotToCamera1));
 
         // The ModuleIOTalonFXS implementation provides an example implementation for
         // TalonFXS controller connected to a CANdi with a PWM encoder. The
@@ -123,11 +126,11 @@ public class RobotContainer {
         shooterTransfer = new Roller(new ShooterTransferConfig(false));
         spindexer = new Roller(new SpindexerConfig(false));
         intakePivot = new Mechanism(new IntakePivotConfig(false));
-        vision =
-            new Vision(
-                drive::addVisionMeasurement,
-                new VisionIOPhotonVision(camera0Name, robotToCamera0),
-                new VisionIOPhotonVision(camera1Name, robotToCamera1));
+        // vision =
+        //     new Vision(
+        //         drive::addVisionMeasurement,
+        //         new VisionIOPhotonVisionSim(camera0Name, robotToCamera0, drive::getPose),
+        //         new VisionIOPhotonVisionSim(camera1Name, robotToCamera1, drive::getPose));
 
         break;
 
@@ -147,16 +150,18 @@ public class RobotContainer {
         shooterTransfer = new Roller(new ShooterTransferConfig() {});
         spindexer = new Roller(new SpindexerConfig() {});
         intakePivot = new Mechanism(new IntakePivotConfig() {});
-        vision = new Vision(drive::addVisionMeasurement, new VisionIO() {}, new VisionIO() {});
+        // vision = new Vision(drive::addVisionMeasurement, new VisionIO() {}, new VisionIO() {});
 
         break;
     }
-
+    shooterVelocity = new LoggedNetworkNumber("/Tuning/ShooterVelocity", 1050.0);
+    feulCommands = new FuelCommands(shooterTransfer, shooterRoller, spindexer);
+    NamedCommands.registerCommand("Release", feulCommands.release(shooterVelocity.getAsDouble()));
+    NamedCommands.registerCommand("Debug 1", Commands.run(() -> System.out.println("Debug 1")));
+    NamedCommands.registerCommand("Debug 2", Commands.run(() -> System.out.println("Debug 2")));
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
-    shooterVelocity = new LoggedNetworkNumber("/Tuning/ShooterVelocity", 1000.0);
     idleShooterVelocity = new LoggedNetworkNumber("/Tuning/IdleShooterVelocity", 500);
-    team = new LoggedNetworkString("/Tuning/Team");
     // Set up SysId routines
     autoChooser.addOption(
         "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
@@ -185,12 +190,9 @@ public class RobotContainer {
         "Center to shoot to depot to shoot left side",
         AutoSequences.centerToShootToDepotToShootLeft(
             drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
+
     // Configure the button bindings
     configureButtonBindings();
-
-    NamedCommands.registerCommands("Intake", intakeRoller.intakeCommand());
-    NamedCommands.registerCommands("Release", shooterTransfer.intakeCommand());
-    NamedCommands.registerCommands("Climb Tower", climber.intakeCommand());
   }
 
   /**
@@ -222,11 +224,11 @@ public class RobotContainer {
     // Switch to X pattern when X button is pressed
     controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
 
-    shooterRoller.runAtVelocity(idleShooterVelocity.getAsDouble());
+    shooterRoller.setDefaultCommand(shooterRoller.intakeCommand());
 
     // Reset gyro to 0° when B button is pressed
     controller
-        .b()
+        .y()
         .onTrue(
             Commands.runOnce(
                     () ->
@@ -234,12 +236,9 @@ public class RobotContainer {
                             new Pose2d(drive.getPose().getTranslation(), Rotation2d.kZero)),
                     drive)
                 .ignoringDisable(true));
-    controller.rightBumper().whileTrue(climber.intakeCommand());
-    controller.leftBumper().whileTrue(climber.releaseCommand());
+    // controller.rightBumper().whileTrue(climber.intakeCommand());
+    // controller.leftBumper().whileTrue(climber.releaseCommand());
     operatorController.rightBumper().whileTrue(spindexer.releaseCommand());
-    controller.rightTrigger().whileTrue(Commands.run(() -> {
-      shooterHood.run(0.05);
-    }));
     // controller
     //     .rightBumper()
     //     .whileTrue(
@@ -254,6 +253,13 @@ public class RobotContainer {
         .whileTrue(
             Commands.run(
                 () -> {
+                  shooterRoller.runAtVelocity(shooterVelocity.getAsDouble());
+                }));
+    operatorController
+        .b()
+        .whileTrue(
+            Commands.run(
+                () -> {
                   shooterRoller.runAtVelocity(getVelocity());
                 }));
     // controller
@@ -263,7 +269,6 @@ public class RobotContainer {
     //             () -> {
     //               shooterRoller.runAtVelocity(shooterVelocity.getAsDouble());
     //             }));
-    operatorController.rightTrigger().whileTrue(shooterRoller.intakeCommand());
     operatorController.leftBumper().whileTrue(intakeRoller.releaseCommand());
     operatorController.leftTrigger().whileTrue(intakeRoller.intakeCommand());
     operatorController
@@ -271,14 +276,14 @@ public class RobotContainer {
         .whileTrue(
             Commands.run(
                 () -> {
-                  intakePivot.runToPosition(2);
+                  intakePivot.run(0.1);
                 }));
     operatorController
         .y()
         .whileTrue(
             Commands.run(
                 () -> {
-                  intakePivot.run(-0.3);
+                  intakePivot.run(-0.1);
                 }));
     // controller.y().whileTrue(shooterRoller.intakeCommand());
   }
@@ -289,8 +294,22 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public double getVelocity() {
+    double x_error;
+    double y_error;
+    // if (DriverStation.getAlliance().get().equals(DriverStation.Alliance.Red)) {
+    //
+    // } else if (DriverStation.getAlliance().get().equals(DriverStation.Alliance.Blue)) {
+    //   x_error = Math.abs(drive.getPose().getX() - 4.5);
+    //   y_error = Math.abs(drive.getPose().getY() - 4);
+    // } else {
+    //   System.out.println("Team not found shooter back to custom value");
+    //   return shooterVelocity.getAsDouble();
+    // }
+    x_error = Math.abs(drive.getPose().getX() - 12);
+    y_error = Math.abs(drive.getPose().getY() - 4);
+    double distance = Units.metersToInches(Math.sqrt(Math.pow(x_error, 2) + Math.pow(y_error, 2)));
     // Get distance to hub
-    return 0.0;
+    return (4.77 * distance + 853);
   }
 
   public Command getAutonomousCommand() {
@@ -305,6 +324,12 @@ public class RobotContainer {
         Roller shooterTransfer,
         Roller spindexer,
         Roller intakeRoller) {
+      return Commands.none();
+    }
+
+    @SuppressWarnings("unused")
+    public static Command BackupShootAuto(
+        Drive drive, Roller shooterTransfer, Roller spindexer, Mechanism shooterHood) {
       return Commands.none();
     }
 
@@ -331,9 +356,5 @@ public class RobotContainer {
         Roller intakeRoller) {
       return Commands.none();
     }
-  }
-
-  private static class NamedCommands {
-    public static void registerCommands(String name, Command command) {}
   }
 }

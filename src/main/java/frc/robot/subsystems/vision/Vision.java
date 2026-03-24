@@ -4,7 +4,6 @@
 // Use of this source code is governed by a BSD
 // license that can be found in the LICENSE file
 // at the root directory of this project.
-
 package frc.robot.subsystems.vision;
 
 import static frc.robot.subsystems.vision.VisionConstants.*;
@@ -33,13 +32,11 @@ public class Vision extends SubsystemBase {
   public Vision(VisionConsumer consumer, VisionIO... io) {
     this.consumer = consumer;
     this.io = io;
-
     // Initialize inputs
     this.inputs = new VisionIOInputsAutoLogged[io.length];
     for (int i = 0; i < inputs.length; i++) {
       inputs[i] = new VisionIOInputsAutoLogged();
     }
-
     // Initialize disconnected alerts
     this.disconnectedAlerts = new Alert[io.length];
     for (int i = 0; i < inputs.length; i++) {
@@ -48,7 +45,6 @@ public class Vision extends SubsystemBase {
               "Vision camera " + Integer.toString(i) + " is disconnected.", AlertType.kWarning);
     }
   }
-
   /**
    * Returns the X angle to the best target, which can be used for simple servoing with vision.
    *
@@ -64,24 +60,20 @@ public class Vision extends SubsystemBase {
       io[i].updateInputs(inputs[i]);
       Logger.processInputs("Vision/Camera" + Integer.toString(i), inputs[i]);
     }
-
     // Initialize logging values
     List<Pose3d> allTagPoses = new LinkedList<>();
     List<Pose3d> allRobotPoses = new LinkedList<>();
     List<Pose3d> allRobotPosesAccepted = new LinkedList<>();
     List<Pose3d> allRobotPosesRejected = new LinkedList<>();
-
     // Loop over cameras
     for (int cameraIndex = 0; cameraIndex < io.length; cameraIndex++) {
       // Update disconnected alert
       disconnectedAlerts[cameraIndex].set(!inputs[cameraIndex].connected);
-
       // Initialize logging values
       List<Pose3d> tagPoses = new LinkedList<>();
       List<Pose3d> robotPoses = new LinkedList<>();
       List<Pose3d> robotPosesAccepted = new LinkedList<>();
       List<Pose3d> robotPosesRejected = new LinkedList<>();
-
       // Add tag poses
       for (int tagId : inputs[cameraIndex].tagIds) {
         var tagPose = aprilTagLayout.getTagPose(tagId);
@@ -89,7 +81,6 @@ public class Vision extends SubsystemBase {
           tagPoses.add(tagPose.get());
         }
       }
-
       // Loop over pose observations
       for (var observation : inputs[cameraIndex].poseObservations) {
         // Check whether to reject pose
@@ -99,13 +90,11 @@ public class Vision extends SubsystemBase {
                     && observation.ambiguity() > maxAmbiguity) // Cannot be high ambiguity
                 || Math.abs(observation.pose().getZ())
                     > maxZError // Must have realistic Z coordinate
-
                 // Must be within the field boundaries
                 || observation.pose().getX() < 0.0
                 || observation.pose().getX() > aprilTagLayout.getFieldLength()
                 || observation.pose().getY() < 0.0
                 || observation.pose().getY() > aprilTagLayout.getFieldWidth();
-
         // Add pose to log
         robotPoses.add(observation.pose());
         if (rejectPose) {
@@ -113,12 +102,10 @@ public class Vision extends SubsystemBase {
         } else {
           robotPosesAccepted.add(observation.pose());
         }
-
         // Skip if rejected
         if (rejectPose) {
           continue;
         }
-
         // Calculate standard deviations
         double stdDevFactor =
             Math.pow(observation.averageTagDistance(), 2.0) / observation.tagCount();
@@ -132,14 +119,12 @@ public class Vision extends SubsystemBase {
           linearStdDev *= cameraStdDevFactors[cameraIndex];
           angularStdDev *= cameraStdDevFactors[cameraIndex];
         }
-
         // Send vision observation
         consumer.accept(
             observation.pose().toPose2d(),
             observation.timestamp(),
             VecBuilder.fill(linearStdDev, linearStdDev, angularStdDev));
       }
-
       // Log camera metadata
       Logger.recordOutput(
           "Vision/Camera" + Integer.toString(cameraIndex) + "/TagPoses",
@@ -158,7 +143,6 @@ public class Vision extends SubsystemBase {
       allRobotPosesAccepted.addAll(robotPosesAccepted);
       allRobotPosesRejected.addAll(robotPosesRejected);
     }
-
     // Log summary data
     Logger.recordOutput("Vision/Summary/TagPoses", allTagPoses.toArray(new Pose3d[0]));
     Logger.recordOutput("Vision/Summary/RobotPoses", allRobotPoses.toArray(new Pose3d[0]));

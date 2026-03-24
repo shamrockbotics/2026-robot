@@ -11,7 +11,7 @@ public class IntakePivotConfig extends MechanismConfig {
   public IntakePivotConfig(boolean real) {
     name = "Intake Config";
     motionType = Mechanism.MotionType.ANGULAR;
-    minPosition = -100;
+    minPosition = -40;
     maxPosition = 100;
     allowedError = Units.degreesToRadians(2);
     if (real) {

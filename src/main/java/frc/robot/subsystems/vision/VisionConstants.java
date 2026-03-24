@@ -20,7 +20,7 @@ public class VisionConstants {
   public static String homeFieldFileName = "whshallway.json";
   // AprilTag layout
   public static AprilTagFieldLayout aprilTagLayout =
-      AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
+      AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
 
   // Camera names, must match names configured on coprocessor
   public static String camera0Name = "back_camera";
@@ -29,10 +29,17 @@ public class VisionConstants {
   // Robot to camera transforms
   // (Not used by Limelight, configure in web UI instead)
   public static Transform3d robotToCamera0 =
-      new Transform3d(-14.5, 0.0, 9.5, new Rotation3d(0.0, 0.0, Math.PI));
+      new Transform3d(
+          Units.inchesToMeters(-14.5),
+          Units.inchesToMeters(0.0),
+          Units.inchesToMeters(9.5),
+          new Rotation3d(0.0, 0.0, 0.0));
   public static Transform3d robotToCamera1 =
       new Transform3d(
-          -11.25, -11.8, 6.75, new Rotation3d(0.0, Units.degreesToRadians(30), 3 * Math.PI / 2));
+          Units.inchesToMeters(11.25),
+          Units.inchesToMeters(-11.8),
+          Units.inchesToMeters(6.75),
+          new Rotation3d(Units.degreesToRadians(0), Units.degreesToRadians(30), Math.PI / 2));
 
   // Basic filtering thresholds
   public static double maxAmbiguity = 0.3;
@@ -70,11 +77,11 @@ public class VisionConstants {
       } catch (Exception e) {
         System.err.println("Error loading AprilTag layout: " + e.getMessage());
         e.printStackTrace();
-        aprilTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeAndyMark);
+        aprilTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
         System.out.println("Reefscape AndyMark AprilTag layout loaded successfully.");
       }
     } else {
-      aprilTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeAndyMark);
+      aprilTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
       System.out.println("Reefscape AndyMark AprilTag layout loaded successfully.");
     }
   }
