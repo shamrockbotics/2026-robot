@@ -14,6 +14,7 @@ import com.pathplanner.lib.auto.NamedCommands;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -253,14 +254,7 @@ public class RobotContainer {
         .whileTrue(
             Commands.run(
                 () -> {
-                  shooterRoller.runAtVelocity(shooterVelocity.getAsDouble());
-                }));
-    operatorController
-        .b()
-        .whileTrue(
-            Commands.run(
-                () -> {
-                  shooterRoller.runAtVelocity(getVelocity());
+                  shooterRoller.runAtVelocity(getTargetVelocity());
                 }));
     // controller
     //     .leftBumper()
@@ -293,23 +287,24 @@ public class RobotContainer {
    *
    * @return the command to run in autonomous
    */
-  public double getVelocity() {
-    double x_error;
-    double y_error;
-    // if (DriverStation.getAlliance().get().equals(DriverStation.Alliance.Red)) {
-    //
-    // } else if (DriverStation.getAlliance().get().equals(DriverStation.Alliance.Blue)) {
-    //   x_error = Math.abs(drive.getPose().getX() - 4.5);
-    //   y_error = Math.abs(drive.getPose().getY() - 4);
-    // } else {
-    //   System.out.println("Team not found shooter back to custom value");
-    //   return shooterVelocity.getAsDouble();
-    // }
-    x_error = Math.abs(drive.getPose().getX() - 12);
-    y_error = Math.abs(drive.getPose().getY() - 4);
+  public double getTargetVelocity() {
+    double x_error = 0;
+    double y_error = 0;
+    if(DriverStation.getAlliance().equals(DriverStation.Alliance.Red)){
+      x_error = Math.abs(drive.getPose().getX() - 12);
+      y_error = Math.abs(drive.getPose().getY() - 4);
+    }
+    else if(DriverStation.getAlliance().equals(DriverStation.Alliance.Blue)){
+      x_error = Math.abs(drive.getPose().getX() - 4.5);
+      y_error = Math.abs(drive.getPose().getY()-4);
+    }
+    else{
+      System.out.println("Team not found shooter back to custom value");
+      return shooterVelocity.getAsDouble();
+    }
     double distance = Units.metersToInches(Math.sqrt(Math.pow(x_error, 2) + Math.pow(y_error, 2)));
-    // Get distance to hub
-    return (4.77 * distance + 853);
+    return (4.77*distance+853);
+
   }
 
   public Command getAutonomousCommand() {
