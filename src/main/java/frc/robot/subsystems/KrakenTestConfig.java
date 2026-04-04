@@ -14,7 +14,7 @@ public class KrakenTestConfig extends RollerConfig {
     intakePercent = 0.2;
     releasePercent = 0.6;
     if (real) {
-      io = new RollerIOTalonFX(10, false, 12, 0.5, 0.0, 0.15, 0.15);
+      io = new RollerIOTalonFX(10, false, 40, 12, 0.5, 0.0, 0.15, 0.15);
     } else {
       io = new RollerIOSim(1, (2.0 * Math.PI / 4096));
     }

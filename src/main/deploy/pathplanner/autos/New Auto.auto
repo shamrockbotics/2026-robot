@@ -9,19 +9,6 @@
           "data": {
             "pathName": "Drive Back middle shoot"
           }
-        },
-        {
-          "type": "parallel",
-          "data": {
-            "commands": [
-              {
-                "type": "named",
-                "data": {
-                  "name": "Release"
-                }
-              }
-            ]
-          }
         }
       ]
     }
