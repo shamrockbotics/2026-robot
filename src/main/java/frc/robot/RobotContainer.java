@@ -155,6 +155,7 @@ public class RobotContainer {
 
         break;
     }
+
     shooterVelocity = new LoggedNetworkNumber("/Tuning/ShooterVelocity", 1125);
     feulCommands =
         new FuelCommands(shooterTransfer, shooterRoller, spindexer, intakeRoller, intakePivot);
@@ -251,7 +252,7 @@ public class RobotContainer {
     // Switch to X pattern when X button is pressed
     controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
 
-    shooterRoller.setDefaultCommand(shooterRoller.intakeCommand());
+    shooterRoller.setDefaultCommand(shooterRoller.runAtVelocityCommand(() -> 15 * 60));
 
     // Reset gyro to 0° when B button is pressed
     controller
@@ -273,16 +274,16 @@ public class RobotContainer {
     //             () -> {
     //               spindexer.run(.1);
     //             }));
-    operatorController.rightTrigger().whileTrue(spindexer.intakeCommand());
-    operatorController.rightTrigger().whileTrue(shooterTransfer.intakeCommand());
     operatorController
-        .x()
-        .whileTrue(
-            Commands.run(
-                () -> {
-                  shooterRoller.setDefaultCommand(
-                      shooterRoller.runAtVelocityCommand(() -> (15 * 60)));
-                }));
+        .rightTrigger()
+        .and(
+            () ->
+                (shooterRoller.getVelocity().getAsDouble() > (shooterVelocity.getAsDouble() - 50)
+                    && shooterRoller.getVelocity().getAsDouble()
+                        < (shooterVelocity.getAsDouble() + 50)))
+        // .whileTrue(spindexer.intakeCommand())
+        .whileTrue(shooterTransfer.intakeCommand());
+    operatorController.x().whileTrue(shooterRoller.runAtVelocityCommand(shooterVelocity));
     // controller
     //     .leftBumper()
     //         Commands.run(
