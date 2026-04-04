@@ -13,6 +13,7 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -150,9 +151,13 @@ public class RobotContainer {
 
         break;
     }
-    shooterVelocity = new LoggedNetworkNumber("/Tuning/ShooterVelocity", 1050.0);
-    feulCommands = new FuelCommands(shooterTransfer, shooterRoller, spindexer);
+    shooterVelocity = new LoggedNetworkNumber("/Tuning/ShooterVelocity", 1125
+    );
+    feulCommands =
+        new FuelCommands(shooterTransfer, shooterRoller, spindexer, intakeRoller, intakePivot);
     NamedCommands.registerCommand("Release", feulCommands.release(shooterVelocity.getAsDouble()));
+    NamedCommands.registerCommand("Intake", feulCommands.intake());
+    NamedCommands.registerCommand("Rollout", feulCommands.rollOut());
     NamedCommands.registerCommand("Debug 1", Commands.run(() -> System.out.println("Debug 1")));
     NamedCommands.registerCommand("Debug 2", Commands.run(() -> System.out.println("Debug 2")));
     // Set up auto routines
@@ -231,7 +236,7 @@ public class RobotContainer {
     // Switch to X pattern when X button is pressed
     controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
 
-    shooterRoller.setDefaultCommand(shooterRoller.runAtVelocityCommand(() -> (15 * 60)));
+    shooterRoller.setDefaultCommand(shooterRoller.intakeCommand());
 
     // Reset gyro to 0° when B button is pressed
     controller
@@ -255,7 +260,13 @@ public class RobotContainer {
     //             }));
     operatorController.rightTrigger().whileTrue(spindexer.intakeCommand());
     operatorController.rightTrigger().whileTrue(shooterTransfer.intakeCommand());
-    operatorController.x().whileTrue(shooterRoller.runAtVelocityCommand(shooterVelocity));
+    operatorController
+        .x()
+        .whileTrue(
+            Commands.run(
+                () -> {
+                  shooterRoller.runAtVelocity(getTargetVelocity());
+                }));
     // controller
     //     .leftBumper()
     //         Commands.run(
@@ -279,6 +290,13 @@ public class RobotContainer {
                 () -> {
                   intakePivot.run(-0.1);
                 }));
+    operatorController
+        .b()
+        .whileTrue(
+            Commands.run(
+                () -> {
+                  shooterRoller.runAtVelocity(getTargetVelocity());
+                }));
     // controller.y().whileTrue(shooterRoller.intakeCommand());
   }
 
@@ -287,23 +305,24 @@ public class RobotContainer {
    *
    * @return the command to run in autonomous
    */
-  public DoubleSupplier getTargetVelocity() {
-    // double x_error = 0;
-    // double y_error = 0;
-    // if (DriverStation.getAlliance().equals(DriverStation.Alliance.Red)) {
-    //   x_error = Math.abs(drive.getPose().getX() - 12);
-    //   y_error = Math.abs(drive.getPose().getY() - 4);
-    // } else if (DriverStation.getAlliance().equals(DriverStation.Alliance.Blue)) {
-    //   x_error = Math.abs(drive.getPose().getX() - 4.5);
-    //   y_error = Math.abs(drive.getPose().getY() - 4);
-    // } else {
-    //   System.out.println("Team not found shooter back to custom value");
-    //   return shooterVelocity.getAsDouble();
-    // }
-    // double distance = Units.metersToInches(Math.sqrt(Math.pow(x_error, 2) + Math.pow(y_error,
-    // 2)));
-    // return (4.77 * distance + 853);
-    return () -> shooterVelocity.getAsDouble();
+  public double getTargetVelocity() {
+    double x_error = 0;
+    double y_error = 0;
+    if(DriverStation.getAlliance().equals(DriverStation.Alliance.Red)){
+      x_error = Math.abs(drive.getPose().getX() - 12);
+      y_error = Math.abs(drive.getPose().getY() - 4);
+    }
+    else if(DriverStation.getAlliance().equals(DriverStation.Alliance.Blue)){
+      x_error = Math.abs(drive.getPose().getX() - 4.5);
+      y_error = Math.abs(drive.getPose().getY()-4);
+    }
+    else{
+      System.out.println("Team not found shooter back to custom value");
+      return shooterVelocity.getAsDouble();
+    }
+    double distance = Units.metersToInches(Math.sqrt(Math.pow(x_error, 2) + Math.pow(y_error, 2)));
+    return (4.77*distance+853);
+
   }
 
   public Command getAutonomousCommand() {

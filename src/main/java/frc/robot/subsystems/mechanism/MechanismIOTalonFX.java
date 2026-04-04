@@ -75,8 +75,8 @@ public class MechanismIOTalonFX implements MechanismIO {
             : com.ctre.phoenix6.signals.InvertedValue.CounterClockwise_Positive;
     config.MotorOutput.NeutralMode = com.ctre.phoenix6.signals.NeutralModeValue.Brake;
 
-    config.CurrentLimits.StatorCurrentLimitEnable = true;
-    config.CurrentLimits.StatorCurrentLimit = currentLimit;
+    config.CurrentLimits.SupplyCurrentLimitEnable = true;
+    config.CurrentLimits.SupplyCurrentLimit = currentLimit;
 
     config.Voltage.PeakForwardVoltage = voltageLimit;
     config.Voltage.PeakReverseVoltage = -voltageLimit;

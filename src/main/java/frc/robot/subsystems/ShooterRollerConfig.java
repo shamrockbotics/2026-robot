@@ -11,7 +11,7 @@ public class ShooterRollerConfig extends RollerConfig {
 
   public ShooterRollerConfig(boolean real) {
     name = "Shooter Roller";
-    intakePercent = 0.2;
+    intakePercent = 0.15;
     releasePercent = 0.2;
     if (real) {
       io = new RollerIOTalonFX(11, 12, true, 12, 0.067721, 0.0, 0.075528, 0.14168, 0.039921);
