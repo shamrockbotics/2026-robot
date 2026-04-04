@@ -2,6 +2,7 @@ package frc.robot.subsystems.roller;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.AutoLog;
 
 public interface RollerIO {
@@ -35,5 +36,9 @@ public interface RollerIO {
 
   public default Command sysIdDynamic(SysIdRoutine.Direction direction) {
     return null;
+  }
+
+  public default DoubleSupplier getVelocity() {
+    return () -> 0.0;
   }
 }

@@ -120,4 +120,8 @@ public class Roller extends SubsystemBase {
   public Command sysIdDynamicCommand(SysIdRoutine.Direction direction) {
     return sysIdRoutine.dynamic(direction);
   }
+
+  public DoubleSupplier getVelocity() {
+    return io.getVelocity();
+  }
 }

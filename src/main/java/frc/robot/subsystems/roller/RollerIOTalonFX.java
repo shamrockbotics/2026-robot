@@ -7,6 +7,7 @@ import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
+import java.util.function.DoubleSupplier;
 
 public class RollerIOTalonFX implements RollerIO {
   private final TalonFX talon;
@@ -83,5 +84,9 @@ public class RollerIOTalonFX implements RollerIO {
 
   public void setVoltage(double voltage) {
     talon.setControl(voltageController.withOutput(voltage));
+  }
+
+  public DoubleSupplier getVelocity() {
+    return () -> talon.getVelocity().getValueAsDouble() * 60;
   }
 }
