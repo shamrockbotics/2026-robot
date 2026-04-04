@@ -1,10 +1,13 @@
 package frc.robot.subsystems.roller;
 
+import static edu.wpi.first.units.Units.Volts;
+
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.Logger;
 
@@ -17,6 +20,7 @@ public class Roller extends SubsystemBase {
 
   private final Alert disconnectedAlert;
   public Command runAtVelocity;
+  private SysIdRoutine sysIdRoutine;
 
   public Roller(RollerConfig config) {
     setName(config.name);
@@ -30,6 +34,17 @@ public class Roller extends SubsystemBase {
     setDefaultCommand(run(() -> stop()).withName("Stop"));
 
     SmartDashboard.putData(this);
+    sysIdRoutine =
+        new SysIdRoutine(
+            new SysIdRoutine.Config(
+                null,
+                null,
+                null, // Use default config
+                (state) -> Logger.recordOutput("SysIdTestState", state.toString())),
+            new SysIdRoutine.Mechanism(
+                (voltage) -> io.setVoltage(voltage.in(Volts)),
+                null, // No log consumer, since data is recorded by AdvantageKit
+                this));
   }
 
   @Override
@@ -90,11 +105,19 @@ public class Roller extends SubsystemBase {
     return run(() -> run(intakePercent)).withName("Intake");
   }
 
-  public Command runAtVelocityCommand(double velocity) {
-    return run(() -> runAtVelocity(velocity)).withName("Release");
+  public Command runAtVelocityCommand(DoubleSupplier velocity) {
+    return run(() -> runAtVelocity(velocity.getAsDouble())).withName("Release");
   }
 
   public Command releaseCommand() {
     return run(() -> run(releasePercent)).withName("Release");
+  }
+
+  public Command sysIdQuasistaticCommand(SysIdRoutine.Direction direction) {
+    return sysIdRoutine.quasistatic(direction);
+  }
+
+  public Command sysIdDynamicCommand(SysIdRoutine.Direction direction) {
+    return sysIdRoutine.dynamic(direction);
   }
 }

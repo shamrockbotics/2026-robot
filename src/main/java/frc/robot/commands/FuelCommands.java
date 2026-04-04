@@ -17,7 +17,7 @@ public class FuelCommands {
 
   public Command release(double velocity) {
     return Commands.parallel(
-        shooterRoller.runAtVelocityCommand(velocity),
+        shooterRoller.runAtVelocityCommand(() -> velocity),
         shooterTransfer.intakeCommand(),
         spindexer.intakeCommand());
   }
