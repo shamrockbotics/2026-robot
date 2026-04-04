@@ -11,8 +11,8 @@ public class IntakeRollerConfig extends RollerConfig {
 
   public IntakeRollerConfig(boolean real) {
     name = "Intake Roller";
-    intakePercent = 0.3; // Might need to be inverted as well
-    releasePercent = -0.3;
+    intakePercent = 0.5; // Might need to be inverted as well
+    releasePercent = 0.3;
     if (real) {
       io = new RollerIOTalonFX(13, false, 12, 0.5, 0.0, 0.0, 0, 0);
     } else {

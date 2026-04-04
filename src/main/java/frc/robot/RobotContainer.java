@@ -14,6 +14,7 @@ import com.pathplanner.lib.auto.NamedCommands;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -33,7 +34,6 @@ import frc.robot.subsystems.drive.ModuleIOTalonFX;
 import frc.robot.subsystems.mechanism.*;
 import frc.robot.subsystems.roller.*;
 import frc.robot.subsystems.vision.*;
-import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
@@ -47,6 +47,7 @@ public class RobotContainer {
   // Subsystems
   private final Drive drive;
   private final Roller shooterRoller;
+  private final Roller climber;
   private final Roller intakeRoller;
   private final Mechanism shooterHood;
   private final Roller shooterTransfer;
@@ -80,6 +81,7 @@ public class RobotContainer {
                 new ModuleIOTalonFX(TunerConstants.BackRight));
         shooterRoller = new Roller(new ShooterRollerConfig());
         intakeRoller = new Roller(new IntakeRollerConfig());
+        climber = new Roller(new ClimberConfig());
         shooterHood = new Mechanism(new ShooterHoodConfig());
         shooterTransfer = new Roller(new ShooterTransferConfig());
         spindexer = new Roller(new SpindexerConfig());
@@ -119,6 +121,7 @@ public class RobotContainer {
                 new ModuleIOSim(TunerConstants.BackLeft),
                 new ModuleIOSim(TunerConstants.BackRight));
         shooterRoller = new Roller(new ShooterRollerConfig(false));
+        climber = new Roller(new ClimberConfig(false));
         intakeRoller = new Roller(new IntakeRollerConfig(false));
         shooterHood = new Mechanism(new ShooterHoodConfig(false));
         shooterTransfer = new Roller(new ShooterTransferConfig(false));
@@ -145,14 +148,14 @@ public class RobotContainer {
         intakeRoller = new Roller(new IntakeRollerConfig() {});
         shooterHood = new Mechanism(new ShooterHoodConfig() {});
         shooterTransfer = new Roller(new ShooterTransferConfig() {});
+        climber = new Roller(new ClimberConfig() {});
         spindexer = new Roller(new SpindexerConfig() {});
         intakePivot = new Mechanism(new IntakePivotConfig() {});
         // vision = new Vision(drive::addVisionMeasurement, new VisionIO() {}, new VisionIO() {});
 
         break;
     }
-    shooterVelocity = new LoggedNetworkNumber("/Tuning/ShooterVelocity", 1125
-    );
+    shooterVelocity = new LoggedNetworkNumber("/Tuning/ShooterVelocity", 1125);
     feulCommands =
         new FuelCommands(shooterTransfer, shooterRoller, spindexer, intakeRoller, intakePivot);
     NamedCommands.registerCommand("Release", feulCommands.release(shooterVelocity.getAsDouble()));
@@ -202,6 +205,18 @@ public class RobotContainer {
         "Center to shoot to depot to shoot left side",
         AutoSequences.centerToShootToDepotToShootLeft(
             drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
+    autoChooser.addOption(
+        "Shooter SysID (Quasistatic Forward)",
+        shooterRoller.sysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
+    autoChooser.addOption(
+        "Shooter SysID (Quasistatic Reverse)",
+        shooterRoller.sysIdQuasistaticCommand(SysIdRoutine.Direction.kReverse));
+    autoChooser.addOption(
+        "Shooter SysID (Dynamic Forward)",
+        shooterRoller.sysIdDynamicCommand(SysIdRoutine.Direction.kForward));
+    autoChooser.addOption(
+        "Shooter SysID (Dynamic Reverse)",
+        shooterRoller.sysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
 
     // Configure the button bindings
     configureButtonBindings();
@@ -265,7 +280,8 @@ public class RobotContainer {
         .whileTrue(
             Commands.run(
                 () -> {
-                  shooterRoller.runAtVelocity(getTargetVelocity());
+                  shooterRoller.setDefaultCommand(
+                      shooterRoller.runAtVelocityCommand(() -> (15 * 60)));
                 }));
     // controller
     //     .leftBumper()
@@ -308,21 +324,18 @@ public class RobotContainer {
   public double getTargetVelocity() {
     double x_error = 0;
     double y_error = 0;
-    if(DriverStation.getAlliance().equals(DriverStation.Alliance.Red)){
+    if (DriverStation.getAlliance().equals(DriverStation.Alliance.Red)) {
       x_error = Math.abs(drive.getPose().getX() - 12);
       y_error = Math.abs(drive.getPose().getY() - 4);
-    }
-    else if(DriverStation.getAlliance().equals(DriverStation.Alliance.Blue)){
+    } else if (DriverStation.getAlliance().equals(DriverStation.Alliance.Blue)) {
       x_error = Math.abs(drive.getPose().getX() - 4.5);
-      y_error = Math.abs(drive.getPose().getY()-4);
-    }
-    else{
+      y_error = Math.abs(drive.getPose().getY() - 4);
+    } else {
       System.out.println("Team not found shooter back to custom value");
       return shooterVelocity.getAsDouble();
     }
     double distance = Units.metersToInches(Math.sqrt(Math.pow(x_error, 2) + Math.pow(y_error, 2)));
-    return (4.77*distance+853);
-
+    return (4.77 * distance + 853);
   }
 
   public Command getAutonomousCommand() {

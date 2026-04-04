@@ -17,7 +17,6 @@ public class RollerIOTalonFX implements RollerIO {
       int id1,
       int id2,
       boolean motorInverted,
-      double currentLimit,
       double voltageLimit,
       double velocityKp,
       double velocityKd,
@@ -40,7 +39,6 @@ public class RollerIOTalonFX implements RollerIO {
   public RollerIOTalonFX(
       int id1,
       boolean motorInverted,
-      double currentLimit,
       double voltageLimit,
       double velocityKp,
       double velocityKd,
@@ -60,10 +58,6 @@ public class RollerIOTalonFX implements RollerIO {
     config.Slot0.kA = velocityKa;
     config.Voltage.withPeakForwardVoltage(voltageLimit);
     config.Voltage.withPeakReverseVoltage(-voltageLimit);
-
-    config.CurrentLimits.SupplyCurrentLimitEnable = true;
-    config.CurrentLimits.SupplyCurrentLimit = currentLimit;
-
     talon.getConfigurator().apply(config);
     talon.setPosition(0);
   }
