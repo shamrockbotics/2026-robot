@@ -32,8 +32,9 @@ public class VisionConstants {
       new Transform3d(
           Units.inchesToMeters(-14.5),
           Units.inchesToMeters(0.0),
-          Units.inchesToMeters(9.5),
-          new Rotation3d(0.0, 0.0, 0.0));
+          Units.inchesToMeters(8),
+          new Rotation3d(0.0, Units.degreesToRadians(-30), Units.degreesToRadians(180)));
+  ;
   public static Transform3d robotToCamera1 =
       new Transform3d(
           Units.inchesToMeters(11.25),
@@ -67,7 +68,7 @@ public class VisionConstants {
     if (loadHomeField) {
       try {
         // Full path to the JSON file
-        String jsonFilePath = Filesystem.getDeployDirectory() + "\\" + homeFieldFileName;
+        String jsonFilePath = Filesystem.getDeployDirectory() + "/" + homeFieldFileName;
 
         System.out.println("Loading AprilTag layout from path: " + jsonFilePath);
 
@@ -78,11 +79,11 @@ public class VisionConstants {
         System.err.println("Error loading AprilTag layout: " + e.getMessage());
         e.printStackTrace();
         aprilTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
-        System.out.println("Reefscape AndyMark AprilTag layout loaded successfully.");
+        System.out.println("Rebuilt AndyMark AprilTag layout loaded successfully.");
       }
     } else {
       aprilTagLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
-      System.out.println("Reefscape AndyMark AprilTag layout loaded successfully.");
+      System.out.println("Rebuilt AndyMark AprilTag layout loaded successfully.");
     }
   }
 }

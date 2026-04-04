@@ -47,6 +47,7 @@ public class RobotContainer {
   // Subsystems
   private final Drive drive;
   private final Roller shooterRoller;
+  private final Vision vision;
   private final Roller climber;
   private final Roller intakeRoller;
   private final Mechanism shooterHood;
@@ -86,11 +87,9 @@ public class RobotContainer {
         shooterTransfer = new Roller(new ShooterTransferConfig());
         spindexer = new Roller(new SpindexerConfig());
         intakePivot = new Mechanism(new IntakePivotConfig());
-        // vision =
-        //     new Vision(
-        //         drive::addVisionMeasurement,
-        //         new VisionIOPhotonVision(camera0Name, robotToCamera0),
-        //         new VisionIOPhotonVision(camera1Name, robotToCamera1));
+        vision =
+            new Vision(
+                drive::addVisionMeasurement, new VisionIOPhotonVision(camera0Name, robotToCamera0));
 
         // The ModuleIOTalonFXS implementation provides an example implementation for
         // TalonFXS controller connected to a CANdi with a PWM encoder. The
@@ -127,11 +126,10 @@ public class RobotContainer {
         shooterTransfer = new Roller(new ShooterTransferConfig(false));
         spindexer = new Roller(new SpindexerConfig(false));
         intakePivot = new Mechanism(new IntakePivotConfig(false));
-        // vision =
-        //     new Vision(
-        //         drive::addVisionMeasurement,
-        //         new VisionIOPhotonVisionSim(camera0Name, robotToCamera0, drive::getPose),
-        //         new VisionIOPhotonVisionSim(camera1Name, robotToCamera1, drive::getPose));
+        vision =
+            new Vision(
+                drive::addVisionMeasurement,
+                new VisionIOPhotonVisionSim(camera0Name, robotToCamera0, drive::getPose));
 
         break;
 
@@ -151,7 +149,7 @@ public class RobotContainer {
         climber = new Roller(new ClimberConfig() {});
         spindexer = new Roller(new SpindexerConfig() {});
         intakePivot = new Mechanism(new IntakePivotConfig() {});
-        // vision = new Vision(drive::addVisionMeasurement, new VisionIO() {}, new VisionIO() {});
+        vision = new Vision(drive::addVisionMeasurement, new VisionIO() {});
 
         break;
     }
