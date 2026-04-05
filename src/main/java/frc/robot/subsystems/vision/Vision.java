@@ -54,6 +54,51 @@ public class Vision extends SubsystemBase {
     return inputs[cameraIndex].latestTargetObservation.tx();
   }
 
+  //Sometimes PhotonVision accidently returns estimates which have 0 tags (probably corrupted) so this filters for that
+  private boolean lacksEnoughTags(VisionIO.PoseObservation observation){
+    return observation.tagCount() == 0;
+  }
+  //Rejects the single tag measurements which have high ambiguity... not an issue for MultiTag
+  private boolean isTooAmbiguous(VisionIO.PoseObservation observation){
+    return observation.tagCount() == 1&&observation.ambiguity() > maxAmbiguity;
+  }
+
+  //Makes sure Z value is reasonable
+  private boolean wrongZ(VisionIO.PoseObservation observation){
+    return Math.abs(observation.pose().getZ()) >= maxZError;
+  }
+  //Makes sure Z value is on field
+  private boolean isOutOfField(VisionIO.PoseObservation observation){
+    return observation.pose().getX() < 0.0|| observation.pose().getX() > aprilTagLayout.getFieldLength()|| observation.pose().getY() < 0.0|| observation.pose().getY() > aprilTagLayout.getFieldWidth();
+  }
+  //Checks if multitag measurements are with april tags that are too far away. Multitag distance limit is larger because it does better with tags that are farther away.
+  private boolean isMultiTagTooFar(VisionIO.PoseObservation observation) {
+    return observation.tagCount() > 1&& observation.averageTagDistance() > maxMultiTagDistance;
+  }
+  //Checks if single tag measurements are with an april tag which is too far away. 
+  private boolean isSingleTagTooFar(VisionIO.PoseObservation observation){
+    return observation.tagCount() == 1 && observation.averageTagDistance() > maxSingleTagDistance;
+  }
+  //checks if it is a multitag result with a large apriltag in the scene (Fast-accept if this is the case)
+  private boolean isMultiTagAreaSufficient(VisionIO.PoseObservation observation) {
+    return observation.tagCount() > 1 && observation.maxTagArea() > minMultiTagArea;
+  }
+
+
+  /*
+  Checks all heuristics and returns a boolean on whether the estimate is good or not
+   */
+  public boolean acceptTagUpdate(VisionIO.PoseObservation observation){
+    if(lacksEnoughTags(observation)) return false;
+    if(isTooAmbiguous(observation)) return false;
+    if(wrongZ(observation)) return false;
+    if(isOutOfField(observation)) return false;
+    if(isMultiTagAreaSufficient(observation)) return true;
+    if(isMultiTagTooFar(observation)) return false;
+    if(isSingleTagTooFar(observation)) return false;
+    return true;
+  }
+
   @Override
   public void periodic() {
     for (int i = 0; i < io.length; i++) {
@@ -84,17 +129,7 @@ public class Vision extends SubsystemBase {
       // Loop over pose observations
       for (var observation : inputs[cameraIndex].poseObservations) {
         // Check whether to reject pose
-        boolean rejectPose =
-            observation.tagCount() == 0 // Must have at least one tag
-                || (observation.tagCount() == 1
-                    && observation.ambiguity() > maxAmbiguity) // Cannot be high ambiguity
-                || Math.abs(observation.pose().getZ())
-                    > maxZError // Must have realistic Z coordinate
-                // Must be within the field boundaries
-                || observation.pose().getX() < 0.0
-                || observation.pose().getX() > aprilTagLayout.getFieldLength()
-                || observation.pose().getY() < 0.0
-                || observation.pose().getY() > aprilTagLayout.getFieldWidth();
+        boolean rejectPose =!acceptTagUpdate(observation);
         // Add pose to log
         robotPoses.add(observation.pose());
         if (rejectPose) {
