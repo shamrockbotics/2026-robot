@@ -65,7 +65,11 @@ public class VisionIOPhotonVision implements VisionIO {
         double totalTagDistance = 0.0;
         double maxTagSize = 0.0;
         for (var target : result.targets) {
-          if (multitagResult.fiducialIDsUsed.contains((short) target.fiducialId)) { //cross references the multitag result and the regular result and only considers those in the max size calculation
+          if (multitagResult.fiducialIDsUsed.contains(
+              (short)
+                  target
+                      .fiducialId)) { // cross references the multitag result and the regular result
+            // and only considers those in the max size calculation
             totalTagDistance += target.bestCameraToTarget.getTranslation().getNorm();
             if (target.getArea() > maxTagSize) {
               maxTagSize = target.getArea();
@@ -75,7 +79,6 @@ public class VisionIOPhotonVision implements VisionIO {
 
         // Add tag IDs
         tagIds.addAll(multitagResult.fiducialIDsUsed);
-
 
         // Add observation
         poseObservations.add(

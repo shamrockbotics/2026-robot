@@ -48,9 +48,7 @@ public class RobotContainer {
   private final Drive drive;
   private final Roller shooterRoller;
   private final Vision vision;
-  private final Roller climber;
   private final Roller intakeRoller;
-  private final Mechanism shooterHood;
   private final Roller shooterTransfer;
   private final Roller spindexer;
   private final Mechanism intakePivot;
@@ -82,8 +80,6 @@ public class RobotContainer {
                 new ModuleIOTalonFX(TunerConstants.BackRight));
         shooterRoller = new Roller(new ShooterRollerConfig());
         intakeRoller = new Roller(new IntakeRollerConfig());
-        climber = new Roller(new ClimberConfig());
-        shooterHood = new Mechanism(new ShooterHoodConfig());
         shooterTransfer = new Roller(new ShooterTransferConfig());
         spindexer = new Roller(new SpindexerConfig());
         intakePivot = new Mechanism(new IntakePivotConfig());
@@ -120,9 +116,7 @@ public class RobotContainer {
                 new ModuleIOSim(TunerConstants.BackLeft),
                 new ModuleIOSim(TunerConstants.BackRight));
         shooterRoller = new Roller(new ShooterRollerConfig(false));
-        climber = new Roller(new ClimberConfig(false));
         intakeRoller = new Roller(new IntakeRollerConfig(false));
-        shooterHood = new Mechanism(new ShooterHoodConfig(false));
         shooterTransfer = new Roller(new ShooterTransferConfig(false));
         spindexer = new Roller(new SpindexerConfig(false));
         intakePivot = new Mechanism(new IntakePivotConfig(false));
@@ -144,9 +138,7 @@ public class RobotContainer {
                 new ModuleIO() {});
         shooterRoller = new Roller(new ShooterRollerConfig() {});
         intakeRoller = new Roller(new IntakeRollerConfig() {});
-        shooterHood = new Mechanism(new ShooterHoodConfig() {});
         shooterTransfer = new Roller(new ShooterTransferConfig() {});
-        climber = new Roller(new ClimberConfig() {});
         spindexer = new Roller(new SpindexerConfig() {});
         intakePivot = new Mechanism(new IntakePivotConfig() {});
         vision = new Vision(drive::addVisionMeasurement, new VisionIO() {});
@@ -192,18 +184,6 @@ public class RobotContainer {
         "Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
     autoChooser.addOption(
         "Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
-    autoChooser.addOption(
-        "2 cycle shooting auto right side",
-        AutoSequences.twoBallAutoRight(
-            drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
-    autoChooser.addOption(
-        "2 cycle shooting auto left side",
-        AutoSequences.twoBallAutoLeft(
-            drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
-    autoChooser.addOption(
-        "Center to shoot to depot to shoot left side",
-        AutoSequences.centerToShootToDepotToShootLeft(
-            drive, shooterHood, shooterRoller, shooterTransfer, spindexer, intakeRoller));
     autoChooser.addOption(
         "Shooter SysID (Quasistatic Forward)",
         shooterRoller.sysIdQuasistaticCommand(SysIdRoutine.Direction.kForward));
@@ -262,9 +242,6 @@ public class RobotContainer {
                             new Pose2d(drive.getPose().getTranslation(), Rotation2d.kZero)),
                     drive)
                 .ignoringDisable(true));
-    // controller.rightBumper().whileTrue(climber.intakeCommand());
-    // controller.leftBumper().whileTrue(climber.releaseCommand());
-    operatorController.rightBumper().whileTrue(spindexer.releaseCommand());
     // controller
     //     .rightBumper()
     //     .whileTrue(
@@ -279,7 +256,7 @@ public class RobotContainer {
                 (shooterRoller.getVelocity().getAsDouble() > (shooterVelocity.getAsDouble() - 50)
                     && shooterRoller.getVelocity().getAsDouble()
                         < (shooterVelocity.getAsDouble() + 50)))
-        // .whileTrue(spindexer.intakeCommand())
+        .whileTrue(spindexer.intakeCommand())
         .whileTrue(shooterTransfer.intakeCommand());
     operatorController.x().whileTrue(shooterRoller.runAtVelocityCommand(shooterVelocity));
     // controller
@@ -296,14 +273,14 @@ public class RobotContainer {
         .whileTrue(
             Commands.run(
                 () -> {
-                  intakePivot.run(0.1);
+                  intakePivot.run(0.05);
                 }));
     operatorController
         .y()
         .whileTrue(
             Commands.run(
                 () -> {
-                  intakePivot.run(-0.1);
+                  intakePivot.run(-0.2);
                 }));
     operatorController
         .b()
@@ -339,43 +316,5 @@ public class RobotContainer {
 
   public Command getAutonomousCommand() {
     return autoChooser.get();
-  }
-
-  private static class AutoSequences {
-    public static Command twoBallAutoRight(
-        Drive drive,
-        Mechanism shooterHood,
-        Roller shooterRoller,
-        Roller shooterTransfer,
-        Roller spindexer,
-        Roller intakeRoller) {
-      return Commands.none();
-    }
-
-    @SuppressWarnings("unused")
-    public static Command BackupShootAuto(
-        Drive drive, Roller shooterTransfer, Roller spindexer, Mechanism shooterHood) {
-      return Commands.none();
-    }
-
-    public static Command twoBallAutoLeft(
-        Drive drive,
-        Mechanism shooterHood,
-        Roller shooterRoller,
-        Roller shooterTransfer,
-        Roller spindexer,
-        Roller intakeRoller) {
-      return Commands.none();
-    }
-
-    public static Command centerToShootToDepotToShootLeft(
-        Drive drive,
-        Mechanism shooterHood,
-        Roller shooterRoller,
-        Roller shooterTransfer,
-        Roller spindexer,
-        Roller intakeRoller) {
-      return Commands.none();
-    }
   }
 }

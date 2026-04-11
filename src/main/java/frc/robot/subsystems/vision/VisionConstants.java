@@ -66,9 +66,11 @@ public class VisionConstants {
 
   public static double singleTagStdDevFactor = 2.0;
 
-  public static double maxMultiTagDistance = 7.0; //Max average distance for multitag results
-  public static double maxSingleTagDistance = 4.0; //Max distance for single tag results 
-  public static double minMultiTagArea = 0.05; //percent of frame (what is currently being used on 1024)
+  public static double maxMultiTagDistance = 7.0; // Max average distance for multitag results
+  public static double maxSingleTagDistance = 4.0; // Max distance for single tag results
+  public static double minMultiTagArea =
+      0.05; // percent of frame (what is currently being used on 1024)
+
   static {
     if (loadHomeField) {
       try {
