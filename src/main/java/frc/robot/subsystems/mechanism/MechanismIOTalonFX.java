@@ -21,7 +21,7 @@ public class MechanismIOTalonFX implements MechanismIO {
   private final PositionVoltage positionVoltage = new PositionVoltage(0.0);
   private final VoltageOut voltageOut = new VoltageOut(0.0);
 
-  private ArmFeedforward armFeedforward = null;
+  private ArmFeedforward armFeedforward = new ArmFeedforward(0.0, 0.0, 0.0, 0.0);
   private ElevatorFeedforward elevatorFeedforward = null;
   private DoubleSupplier positionOffsetSupplier = () -> 0.0;
 
@@ -85,6 +85,8 @@ public class MechanismIOTalonFX implements MechanismIO {
     config.Slot0.kI = 0.0;
     config.Slot0.kD = kD;
 
+    config.Feedback.SensorToMechanismRatio = encoderPositionFactor * 20 * 18 / 10;
+
     talon.getConfigurator().apply(config);
 
     encoder = new DutyCycleEncoder(encoderChannel);
@@ -111,7 +113,7 @@ public class MechanismIOTalonFX implements MechanismIO {
 
     if (encoderConnected) {
       inputs.currentPosition = getRawPositionMechanismUnits();
-      inputs.velocity = 0.0;
+      inputs.velocity = talon.getVelocity().getValueAsDouble();
     }
 
     inputs.appliedVolts = talon.getMotorVoltage().getValueAsDouble();
@@ -119,6 +121,7 @@ public class MechanismIOTalonFX implements MechanismIO {
     inputs.currentAmps = talon.getStatorCurrent().getValueAsDouble();
 
     inputs.targetPosition = setpoint;
+    syncTalonToEncoder();
   }
 
   @Override
@@ -126,11 +129,7 @@ public class MechanismIOTalonFX implements MechanismIO {
     setpoint = position;
     double feedforward = calculateFeedforward(position);
 
-    syncTalonToEncoder();
-
-    double talonSetpointRotations = mechanismUnitsToTalonRotations(position);
-    talon.setControl(
-        positionVoltage.withPosition(talonSetpointRotations).withFeedForward(feedforward));
+    talon.setControl(positionVoltage.withPosition(position).withFeedForward(feedforward));
   }
 
   @Override
@@ -144,15 +143,15 @@ public class MechanismIOTalonFX implements MechanismIO {
   }
 
   private double getRawPositionMechanismUnits() {
-    double raw = encoder.get(); // 0.0 – 1.0 rotations
+    double raw = encoder.get() * encoderPositionFactor; // 0.0 – 1.0 rotations
     raw -= zeroOffset;
 
-    if (raw > 0.5) raw -= 1.0;
-    if (raw < -0.5) raw += 1.0;
+    if (raw > Math.PI) raw -= 2 * Math.PI;
+    if (raw < -Math.PI) raw += 2 * Math.PI;
 
     if (encoderInverted) raw = -raw;
 
-    return raw * encoderPositionFactor;
+    return raw;
   }
 
   private double mechanismUnitsToTalonRotations(double mechanismUnits) {
@@ -160,13 +159,13 @@ public class MechanismIOTalonFX implements MechanismIO {
   }
 
   private void syncTalonToEncoder() {
-    double encoderRotations = getRawPositionMechanismUnits() / encoderPositionFactor;
+    double encoderRotations = getRawPositionMechanismUnits();
     talon.setPosition(encoderRotations);
   }
 
   private double calculateFeedforward(double setpoint) {
     if (armFeedforward != null) {
-      return armFeedforward.calculate(setpoint + positionOffsetSupplier.getAsDouble(), 0);
+      return armFeedforward.calculate(setpoint, 0);
     } else if (elevatorFeedforward != null) {
       return elevatorFeedforward.calculate(0);
     }

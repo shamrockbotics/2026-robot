@@ -16,7 +16,7 @@ import edu.wpi.first.wpilibj.Filesystem;
 
 public class VisionConstants {
 
-  public static boolean loadHomeField = true;
+  public static boolean loadHomeField = false;
   public static String homeFieldFileName = "whshallway.json";
   // AprilTag layout
   public static AprilTagFieldLayout aprilTagLayout =

@@ -7,7 +7,7 @@
 
 package frc.robot;
 
-import static frc.robot.subsystems.vision.VisionConstants.*;
+// import static frc.robot.subsystems.vision.VisionConstants.*;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
@@ -47,7 +47,7 @@ public class RobotContainer {
   // Subsystems
   private final Drive drive;
   private final Roller shooterRoller;
-  private final Vision vision;
+  // private final Vision vision;
   private final Roller intakeRoller;
   private final Roller shooterTransfer;
   private final Roller spindexer;
@@ -83,9 +83,10 @@ public class RobotContainer {
         shooterTransfer = new Roller(new ShooterTransferConfig());
         spindexer = new Roller(new SpindexerConfig());
         intakePivot = new Mechanism(new IntakePivotConfig());
-        vision =
-            new Vision(
-                drive::addVisionMeasurement, new VisionIOPhotonVision(camera0Name, robotToCamera0));
+        // vision =
+        //     new Vision(
+        //         drive::addVisionMeasurement, new VisionIOPhotonVision(camera0Name,
+        // robotToCamera0));
 
         // The ModuleIOTalonFXS implementation provides an example implementation for
         // TalonFXS controller connected to a CANdi with a PWM encoder. The
@@ -120,10 +121,10 @@ public class RobotContainer {
         shooterTransfer = new Roller(new ShooterTransferConfig(false));
         spindexer = new Roller(new SpindexerConfig(false));
         intakePivot = new Mechanism(new IntakePivotConfig(false));
-        vision =
-            new Vision(
-                drive::addVisionMeasurement,
-                new VisionIOPhotonVisionSim(camera0Name, robotToCamera0, drive::getPose));
+        // vision =
+        //     new Vision(
+        //         drive::addVisionMeasurement,
+        //         new VisionIOPhotonVisionSim(camera0Name, robotToCamera0, drive::getPose));
 
         break;
 
@@ -141,7 +142,7 @@ public class RobotContainer {
         shooterTransfer = new Roller(new ShooterTransferConfig() {});
         spindexer = new Roller(new SpindexerConfig() {});
         intakePivot = new Mechanism(new IntakePivotConfig() {});
-        vision = new Vision(drive::addVisionMeasurement, new VisionIO() {});
+        // vision = new Vision(drive::addVisionMeasurement, new VisionIO() {});
 
         break;
     }
@@ -196,6 +197,7 @@ public class RobotContainer {
     autoChooser.addOption(
         "Shooter SysID (Dynamic Reverse)",
         shooterRoller.sysIdDynamicCommand(SysIdRoutine.Direction.kReverse));
+    intakePivot.addSysIdCommands(autoChooser);
 
     // Configure the button bindings
     configureButtonBindings();
@@ -268,27 +270,10 @@ public class RobotContainer {
     //             }));
     operatorController.leftBumper().whileTrue(intakeRoller.releaseCommand());
     operatorController.leftTrigger().whileTrue(intakeRoller.intakeCommand());
-    operatorController
-        .a()
-        .whileTrue(
-            Commands.run(
-                () -> {
-                  intakePivot.run(0.05);
-                }));
-    operatorController
-        .y()
-        .whileTrue(
-            Commands.run(
-                () -> {
-                  intakePivot.run(-0.2);
-                }));
-    operatorController
-        .b()
-        .whileTrue(
-            Commands.run(
-                () -> {
-                  shooterRoller.runAtVelocity(getTargetVelocity());
-                }));
+    operatorController.a().whileTrue(intakePivot.runToPositionCommand(0.0));
+    operatorController.y().whileTrue(intakePivot.runToPositionCommand(1.556));
+    operatorController.b().whileTrue(intakePivot.runPercentCommand(() -> 0.1));
+
     // controller.y().whileTrue(shooterRoller.intakeCommand());
   }
 

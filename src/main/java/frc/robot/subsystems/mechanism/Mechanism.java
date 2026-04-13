@@ -51,7 +51,7 @@ public class Mechanism extends SubsystemBase {
                 null,
                 null,
                 null,
-                (state) -> Logger.recordOutput(getName() + "/SysIdState", state.toString())),
+                (state) -> Logger.recordOutput("SysIdTestState", state.toString())),
             new SysIdRoutine.Mechanism(io::setVoltage, null, this));
 
     minPosition = config.minPosition;
