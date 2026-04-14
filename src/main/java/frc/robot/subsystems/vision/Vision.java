@@ -22,12 +22,14 @@ import frc.robot.subsystems.vision.VisionIO.PoseObservationType;
 import java.util.LinkedList;
 import java.util.List;
 import org.littletonrobotics.junction.Logger;
+import org.littletonrobotics.junction.networktables.LoggedNetworkBoolean;
 
 public class Vision extends SubsystemBase {
   private final VisionConsumer consumer;
   private final VisionIO[] io;
   private final VisionIOInputsAutoLogged[] inputs;
   private final Alert[] disconnectedAlerts;
+  private final LoggedNetworkBoolean visionEnabled;
 
   public Vision(VisionConsumer consumer, VisionIO... io) {
     this.consumer = consumer;
@@ -44,6 +46,8 @@ public class Vision extends SubsystemBase {
           new Alert(
               "Vision camera " + Integer.toString(i) + " is disconnected.", AlertType.kWarning);
     }
+
+    visionEnabled = new LoggedNetworkBoolean("/Tuning/VisionEnabled", true);
   }
   /**
    * Returns the X angle to the best target, which can be used for simple servoing with vision.
@@ -94,6 +98,7 @@ public class Vision extends SubsystemBase {
   Checks all heuristics and returns a boolean on whether the estimate is good or not
    */
   public boolean acceptTagUpdate(VisionIO.PoseObservation observation) {
+    if (!visionEnabled.get()) return false;
     if (lacksEnoughTags(observation)) return false;
     if (isTooAmbiguous(observation)) return false;
     if (wrongZ(observation)) return false;

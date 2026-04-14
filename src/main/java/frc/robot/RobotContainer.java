@@ -7,12 +7,14 @@
 
 package frc.robot;
 
-// import static frc.robot.subsystems.vision.VisionConstants.*;
+import static frc.robot.subsystems.vision.VisionConstants.*;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
@@ -35,6 +37,7 @@ import frc.robot.subsystems.mechanism.*;
 import frc.robot.subsystems.roller.*;
 import frc.robot.subsystems.vision.*;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
+import org.littletonrobotics.junction.networktables.LoggedNetworkBoolean;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
 /**
@@ -47,7 +50,7 @@ public class RobotContainer {
   // Subsystems
   private final Drive drive;
   private final Roller shooterRoller;
-  // private final Vision vision;
+  private final Vision vision;
   private final Roller intakeRoller;
   private final Roller shooterTransfer;
   private final Roller spindexer;
@@ -63,6 +66,7 @@ public class RobotContainer {
   private final LoggedDashboardChooser<Command> autoChooser;
   private final LoggedNetworkNumber shooterVelocity;
   private final LoggedNetworkNumber idleShooterVelocity;
+  private final LoggedNetworkBoolean autoShootEnabled;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -83,10 +87,9 @@ public class RobotContainer {
         shooterTransfer = new Roller(new ShooterTransferConfig());
         spindexer = new Roller(new SpindexerConfig());
         intakePivot = new Mechanism(new IntakePivotConfig());
-        // vision =
-        //     new Vision(
-        //         drive::addVisionMeasurement, new VisionIOPhotonVision(camera0Name,
-        // robotToCamera0));
+        vision =
+            new Vision(
+                drive::addVisionMeasurement, new VisionIOPhotonVision(camera0Name, robotToCamera0));
 
         // The ModuleIOTalonFXS implementation provides an example implementation for
         // TalonFXS controller connected to a CANdi with a PWM encoder. The
@@ -121,10 +124,10 @@ public class RobotContainer {
         shooterTransfer = new Roller(new ShooterTransferConfig(false));
         spindexer = new Roller(new SpindexerConfig(false));
         intakePivot = new Mechanism(new IntakePivotConfig(false));
-        // vision =
-        //     new Vision(
-        //         drive::addVisionMeasurement,
-        //         new VisionIOPhotonVisionSim(camera0Name, robotToCamera0, drive::getPose));
+        vision =
+            new Vision(
+                drive::addVisionMeasurement,
+                new VisionIOPhotonVisionSim(camera0Name, robotToCamera0, drive::getPose));
 
         break;
 
@@ -142,12 +145,13 @@ public class RobotContainer {
         shooterTransfer = new Roller(new ShooterTransferConfig() {});
         spindexer = new Roller(new SpindexerConfig() {});
         intakePivot = new Mechanism(new IntakePivotConfig() {});
-        // vision = new Vision(drive::addVisionMeasurement, new VisionIO() {});
+        vision = new Vision(drive::addVisionMeasurement, new VisionIO() {});
 
         break;
     }
 
     shooterVelocity = new LoggedNetworkNumber("/Tuning/ShooterVelocity", 1125);
+    autoShootEnabled = new LoggedNetworkBoolean("/Tuning/AutoShootEnabled", true);
     feulCommands =
         new FuelCommands(shooterTransfer, shooterRoller, spindexer, intakeRoller, intakePivot);
     NamedCommands.registerCommand("Release", feulCommands.release(shooterVelocity.getAsDouble()));
@@ -217,7 +221,6 @@ public class RobotContainer {
             () -> controller.getLeftY(),
             () -> controller.getLeftX(),
             () -> -controller.getRightX()));
-
     // Lock to 0° when A button is held
 
     controller
@@ -235,15 +238,8 @@ public class RobotContainer {
     shooterRoller.setDefaultCommand(shooterRoller.runAtVelocityCommand(() -> 15 * 60));
 
     // Reset gyro to 0° when B button is pressed
-    controller
-        .y()
-        .onTrue(
-            Commands.runOnce(
-                    () ->
-                        drive.setPose(
-                            new Pose2d(drive.getPose().getTranslation(), Rotation2d.kZero)),
-                    drive)
-                .ignoringDisable(true));
+    controller.y().onTrue(DriveCommands.resetPoseForward(drive).ignoringDisable(true));
+
     // controller
     //     .rightBumper()
     //     .whileTrue(
@@ -255,12 +251,15 @@ public class RobotContainer {
         .rightTrigger()
         .and(
             () ->
-                (shooterRoller.getVelocity().getAsDouble() > (shooterVelocity.getAsDouble() - 50)
+                (shooterRoller.getVelocity().getAsDouble() > (getTargetVelocity() - 50)
                     && shooterRoller.getVelocity().getAsDouble()
-                        < (shooterVelocity.getAsDouble() + 50)))
+                        < (getTargetVelocity() + 50)))
         .whileTrue(spindexer.intakeCommand())
         .whileTrue(shooterTransfer.intakeCommand());
-    operatorController.x().whileTrue(shooterRoller.runAtVelocityCommand(shooterVelocity));
+    operatorController.x().whileTrue(shooterRoller.runAtVelocityCommand(() -> getTargetVelocity()));
+    controller.b().whileTrue(Commands.runOnce(() -> {
+      drive.setPose(new Pose2d(drive.getPose().getTranslation(), new Rotation2d(getRobotToHubTranslation().getX(), getRobotToHubTranslation().getY())));
+    }));
     // controller
     //     .leftBumper()
     //         Commands.run(
@@ -270,9 +269,9 @@ public class RobotContainer {
     //             }));
     operatorController.leftBumper().whileTrue(intakeRoller.releaseCommand());
     operatorController.leftTrigger().whileTrue(intakeRoller.intakeCommand());
+    operatorController.leftTrigger().whileTrue(intakePivot.runToPositionCommand(0.0));
     operatorController.a().whileTrue(intakePivot.runToPositionCommand(0.0));
     operatorController.y().whileTrue(intakePivot.runToPositionCommand(1.556));
-    operatorController.b().whileTrue(intakePivot.runPercentCommand(() -> 0.1));
 
     // controller.y().whileTrue(shooterRoller.intakeCommand());
   }
@@ -283,20 +282,30 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public double getTargetVelocity() {
-    double x_error = 0;
-    double y_error = 0;
-    if (DriverStation.getAlliance().equals(DriverStation.Alliance.Red)) {
-      x_error = Math.abs(drive.getPose().getX() - 12);
-      y_error = Math.abs(drive.getPose().getY() - 4);
-    } else if (DriverStation.getAlliance().equals(DriverStation.Alliance.Blue)) {
-      x_error = Math.abs(drive.getPose().getX() - 4.5);
-      y_error = Math.abs(drive.getPose().getY() - 4);
-    } else {
-      System.out.println("Team not found shooter back to custom value");
+    if(autoShootEnabled.getAsBoolean() == false){
       return shooterVelocity.getAsDouble();
     }
-    double distance = Units.metersToInches(Math.sqrt(Math.pow(x_error, 2) + Math.pow(y_error, 2)));
+    Translation2d robotToHub = getRobotToHubTranslation();
+    double distance = Units.metersToInches(Math.sqrt(Math.pow(robotToHub.getX(), 2) + Math.pow(robotToHub.getY(), 2)));
     return (4.77 * distance + 853);
+  }
+
+  public Translation2d getRobotToHubTranslation(){
+    if (DriverStation.getAlliance().get().equals(DriverStation.Alliance.Red)) {
+      return new Translation2d(12 - drive.getPose().getX(), 4 - drive.getPose().getY());
+    } else if (DriverStation.getAlliance().get().equals(DriverStation.Alliance.Blue)) {
+      return new Translation2d(4.5 - drive.getPose().getX(), 4 - drive.getPose().getY());
+    } else {
+      System.out.println("Team not found shooter back to custom value");
+      return new Translation2d(0, 0);
+    }
+  }
+
+  public double getAngle(){
+    Translation2d robotToHub = getRobotToHubTranslation();
+    double x_error = robotToHub.getX();
+    double y_error = robotToHub.getY();
+    return Math.atan(y_error/x_error);
   }
 
   public Command getAutonomousCommand() {

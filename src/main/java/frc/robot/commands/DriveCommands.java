@@ -85,7 +85,7 @@ public class DriveCommands {
                   omega * drive.getMaxAngularSpeedRadPerSec());
           boolean isFlipped =
               DriverStation.getAlliance().isPresent()
-                  && DriverStation.getAlliance().get() == Alliance.Red;
+                  && DriverStation.getAlliance().get() == Alliance.Blue;
           drive.runVelocity(
               ChassisSpeeds.fromFieldRelativeSpeeds(
                   speeds,
@@ -155,6 +155,18 @@ public class DriveCommands {
    *
    * <p>This command should only be used in voltage control mode.
    */
+  public static Command resetPoseForward(Drive drive) {
+    Rotation2d pose;
+    if (DriverStation.getAlliance().isPresent()
+        && DriverStation.getAlliance().get() == Alliance.Red) {
+      pose = Rotation2d.kZero;
+    } else {
+      pose = Rotation2d.k180deg;
+    }
+    return Commands.runOnce(
+        () -> drive.setPose(new Pose2d(drive.getPose().getTranslation(), pose)));
+  }
+
   public static Command feedforwardCharacterization(Drive drive) {
     List<Double> velocitySamples = new LinkedList<>();
     List<Double> voltageSamples = new LinkedList<>();
