@@ -11,8 +11,6 @@ import static frc.robot.subsystems.vision.VisionConstants.*;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
-
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
@@ -61,6 +59,11 @@ public class RobotContainer {
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
   private final CommandXboxController operatorController = new CommandXboxController(1);
+
+  // Adjustable offset to correct which way the robot considers its "front" when aiming at the hub.
+  // Set to 180 degrees by default to flip the heading. Change this value to tune without
+  // modifying the rest of the targeting code.
+  private static final Rotation2d HUB_FACING_OFFSET = Rotation2d.fromDegrees(180.0);
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
@@ -156,7 +159,8 @@ public class RobotContainer {
         new FuelCommands(shooterTransfer, shooterRoller, spindexer, intakeRoller, intakePivot);
     NamedCommands.registerCommand("Release", feulCommands.release(shooterVelocity.getAsDouble()));
     NamedCommands.registerCommand("Intake", feulCommands.intake());
-    NamedCommands.registerCommand("Rollout", feulCommands.rollOut());
+    NamedCommands.registerCommand("Rollout", intakePivot.runToPositionCommand(0));
+    NamedCommands.registerCommand("RollBack", intakePivot.runToPositionCommand(1.556));
     NamedCommands.registerCommand("Debug 1", Commands.run(() -> System.out.println("Debug 1")));
     NamedCommands.registerCommand("Debug 2", Commands.run(() -> System.out.println("Debug 2")));
     // Set up auto routines
@@ -252,14 +256,22 @@ public class RobotContainer {
         .and(
             () ->
                 (shooterRoller.getVelocity().getAsDouble() > (getTargetVelocity() - 50)
-                    && shooterRoller.getVelocity().getAsDouble()
-                        < (getTargetVelocity() + 50)))
+                    && shooterRoller.getVelocity().getAsDouble() < (getTargetVelocity() + 50)))
         .whileTrue(spindexer.intakeCommand())
         .whileTrue(shooterTransfer.intakeCommand());
     operatorController.x().whileTrue(shooterRoller.runAtVelocityCommand(() -> getTargetVelocity()));
-    controller.b().whileTrue(Commands.runOnce(() -> {
-      drive.setPose(new Pose2d(drive.getPose().getTranslation(), new Rotation2d(getRobotToHubTranslation().getX(), getRobotToHubTranslation().getY())));
-    }));
+    controller
+        .b()
+        .whileTrue(
+            DriveCommands.joystickDriveAtAngle(
+                drive,
+                () -> -controller.getLeftY(),
+                () -> -controller.getLeftX(),
+                () -> {
+                  var t = getRobotToHubTranslation();
+                  var rot = new Rotation2d(t.getX(), t.getY());
+                  return rot.plus(HUB_FACING_OFFSET);
+                }));
     // controller
     //     .leftBumper()
     //         Commands.run(
@@ -282,15 +294,17 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public double getTargetVelocity() {
-    if(autoShootEnabled.getAsBoolean() == false){
+    if (autoShootEnabled.getAsBoolean() == false) {
       return shooterVelocity.getAsDouble();
     }
     Translation2d robotToHub = getRobotToHubTranslation();
-    double distance = Units.metersToInches(Math.sqrt(Math.pow(robotToHub.getX(), 2) + Math.pow(robotToHub.getY(), 2)));
+    double distance =
+        Units.metersToInches(
+            Math.sqrt(Math.pow(robotToHub.getX(), 2) + Math.pow(robotToHub.getY(), 2)));
     return (4.77 * distance + 853);
   }
 
-  public Translation2d getRobotToHubTranslation(){
+  public Translation2d getRobotToHubTranslation() {
     if (DriverStation.getAlliance().get().equals(DriverStation.Alliance.Red)) {
       return new Translation2d(12 - drive.getPose().getX(), 4 - drive.getPose().getY());
     } else if (DriverStation.getAlliance().get().equals(DriverStation.Alliance.Blue)) {
@@ -301,11 +315,11 @@ public class RobotContainer {
     }
   }
 
-  public double getAngle(){
+  public double getAngle() {
     Translation2d robotToHub = getRobotToHubTranslation();
     double x_error = robotToHub.getX();
     double y_error = robotToHub.getY();
-    return Math.atan(y_error/x_error);
+    return Math.atan(y_error / x_error);
   }
 
   public Command getAutonomousCommand() {

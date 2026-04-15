@@ -5,25 +5,6 @@
     "data": {
       "commands": [
         {
-          "type": "race",
-          "data": {
-            "commands": [
-              {
-                "type": "named",
-                "data": {
-                  "name": "Release"
-                }
-              },
-              {
-                "type": "wait",
-                "data": {
-                  "waitTime": 2.0
-                }
-              }
-            ]
-          }
-        },
-        {
           "type": "path",
           "data": {
             "pathName": "Left to center"
@@ -36,6 +17,12 @@
               {
                 "type": "named",
                 "data": {
+                  "name": "Rollout"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
                   "name": "Intake"
                 }
               },
@@ -43,6 +30,12 @@
                 "type": "wait",
                 "data": {
                   "waitTime": 2.0
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "Rollback"
                 }
               }
             ]
@@ -86,6 +79,12 @@
               {
                 "type": "named",
                 "data": {
+                  "name": "Rollout"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
                   "name": "Intake"
                 }
               },
@@ -93,6 +92,12 @@
                 "type": "wait",
                 "data": {
                   "waitTime": 2.0
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "Rollback"
                 }
               }
             ]
