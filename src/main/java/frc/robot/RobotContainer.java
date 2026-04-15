@@ -13,6 +13,7 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
@@ -54,6 +55,7 @@ public class RobotContainer {
   private final Roller spindexer;
   private final Mechanism intakePivot;
   private final FuelCommands feulCommands;
+  private final InterpolatingDoubleTreeMap interpolatingDoubleTreeMap;
   // private final Vision vision;
 
   // Controller
@@ -152,6 +154,10 @@ public class RobotContainer {
 
         break;
     }
+    interpolatingDoubleTreeMap = new InterpolatingDoubleTreeMap();
+    interpolatingDoubleTreeMap.put(3.9628, (double) 1400);
+    interpolatingDoubleTreeMap.put(3.66, (double) 1300);
+    interpolatingDoubleTreeMap.put(2.17, (double) 1125);
 
     shooterVelocity = new LoggedNetworkNumber("/Tuning/ShooterVelocity", 1125);
     autoShootEnabled = new LoggedNetworkBoolean("/Tuning/AutoShootEnabled", true);
@@ -254,9 +260,7 @@ public class RobotContainer {
     operatorController
         .rightTrigger()
         .and(
-            () ->
-                (shooterRoller.getVelocity().getAsDouble() > (getTargetVelocity() - 50)
-                    && shooterRoller.getVelocity().getAsDouble() < (getTargetVelocity() + 50)))
+            () -> Math.abs(shooterRoller.getVelocity().getAsDouble() - getTargetVelocity()) <= 50.0)
         .whileTrue(spindexer.intakeCommand())
         .whileTrue(shooterTransfer.intakeCommand());
     operatorController.x().whileTrue(shooterRoller.runAtVelocityCommand(() -> getTargetVelocity()));
@@ -284,7 +288,21 @@ public class RobotContainer {
     operatorController.leftTrigger().whileTrue(intakePivot.runToPositionCommand(0.0));
     operatorController.a().whileTrue(intakePivot.runToPositionCommand(0.0));
     operatorController.y().whileTrue(intakePivot.runToPositionCommand(1.556));
-
+    operatorController
+        .b()
+        .whileTrue(
+            Commands.run(
+                () ->
+                    System.out.println(
+                        "x: "
+                            + getRobotToHubTranslation().getX()
+                            + " y: "
+                            + getRobotToHubTranslation().getY()
+                            + " distance to hub: "
+                            + Math.hypot(
+                                getRobotToHubTranslation().getX(),
+                                getRobotToHubTranslation().getY()))));
+    operatorController.rightBumper().whileTrue(spindexer.releaseCommand());
     // controller.y().whileTrue(shooterRoller.intakeCommand());
   }
 
@@ -298,17 +316,19 @@ public class RobotContainer {
       return shooterVelocity.getAsDouble();
     }
     Translation2d robotToHub = getRobotToHubTranslation();
-    double distance =
-        Units.metersToInches(
-            Math.sqrt(Math.pow(robotToHub.getX(), 2) + Math.pow(robotToHub.getY(), 2)));
-    return (4.77 * distance + 853);
+    double distance = Math.hypot(robotToHub.getX(), robotToHub.getY());
+    return (interpolatingDoubleTreeMap.get(distance));
   }
 
   public Translation2d getRobotToHubTranslation() {
     if (DriverStation.getAlliance().get().equals(DriverStation.Alliance.Red)) {
-      return new Translation2d(12 - drive.getPose().getX(), 4 - drive.getPose().getY());
+      return new Translation2d(
+          Units.inchesToMeters(469.11) - drive.getPose().getX(),
+          Units.inchesToMeters(158.84) - drive.getPose().getY());
     } else if (DriverStation.getAlliance().get().equals(DriverStation.Alliance.Blue)) {
-      return new Translation2d(4.5 - drive.getPose().getX(), 4 - drive.getPose().getY());
+      return new Translation2d(
+          Units.inchesToMeters(182.11) - drive.getPose().getX(),
+          Units.inchesToMeters(158.84) - drive.getPose().getY());
     } else {
       System.out.println("Team not found shooter back to custom value");
       return new Translation2d(0, 0);

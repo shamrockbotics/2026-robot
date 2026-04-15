@@ -36,6 +36,12 @@
               {
                 "type": "named",
                 "data": {
+                  "name": "Rollout"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
                   "name": "Intake"
                 }
               },
@@ -43,6 +49,12 @@
                 "type": "wait",
                 "data": {
                   "waitTime": 2.0
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "Rollback"
                 }
               }
             ]
@@ -86,6 +98,12 @@
               {
                 "type": "named",
                 "data": {
+                  "name": "Rollout"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
                   "name": "Intake"
                 }
               },
@@ -93,6 +111,12 @@
                 "type": "wait",
                 "data": {
                   "waitTime": 2.0
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "Rollback"
                 }
               }
             ]
