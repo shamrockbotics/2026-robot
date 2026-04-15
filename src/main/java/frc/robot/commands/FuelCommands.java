@@ -4,6 +4,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.subsystems.mechanism.Mechanism;
 import frc.robot.subsystems.roller.Roller;
+import java.util.function.DoubleSupplier;
 
 public class FuelCommands {
   private Roller shooterTransfer;
@@ -25,9 +26,9 @@ public class FuelCommands {
     this.intakePivot = intakePivot;
   }
 
-  public Command release(double velocity) {
+  public Command release(DoubleSupplier velocity) {
     return Commands.parallel(
-        shooterRoller.runAtVelocityCommand(() -> velocity),
+        shooterRoller.runAtVelocityCommand(velocity),
         shooterTransfer.intakeCommand(),
         spindexer.intakeCommand());
   }
