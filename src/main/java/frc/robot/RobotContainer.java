@@ -163,7 +163,7 @@ public class RobotContainer {
     autoShootEnabled = new LoggedNetworkBoolean("/Tuning/AutoShootEnabled", true);
     feulCommands =
         new FuelCommands(shooterTransfer, shooterRoller, spindexer, intakeRoller, intakePivot);
-    NamedCommands.registerCommand("Release", feulCommands.release(shooterVelocity.getAsDouble()));
+    NamedCommands.registerCommand("Release", feulCommands.release(() -> getTargetVelocity()));
     NamedCommands.registerCommand("Intake", feulCommands.intake(intakeRoller.getDefaultCommand()));
     NamedCommands.registerCommand("Rollout", intakePivot.runToPositionCommand(0));
     NamedCommands.registerCommand("RollBack", intakePivot.runToPositionCommand(1.556));
