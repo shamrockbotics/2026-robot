@@ -32,7 +32,7 @@ public class FuelCommands {
         spindexer.intakeCommand());
   }
 
-  public Command intake() {
+  public Command intake(Command command) {
     return intakeRoller.intakeCommand();
   }
 

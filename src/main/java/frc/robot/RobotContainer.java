@@ -164,7 +164,7 @@ public class RobotContainer {
     feulCommands =
         new FuelCommands(shooterTransfer, shooterRoller, spindexer, intakeRoller, intakePivot);
     NamedCommands.registerCommand("Release", feulCommands.release(shooterVelocity.getAsDouble()));
-    NamedCommands.registerCommand("Intake", feulCommands.intake());
+    NamedCommands.registerCommand("Intake", feulCommands.intake(intakeRoller.getDefaultCommand()));
     NamedCommands.registerCommand("Rollout", intakePivot.runToPositionCommand(0));
     NamedCommands.registerCommand("RollBack", intakePivot.runToPositionCommand(1.556));
     NamedCommands.registerCommand("Debug 1", Commands.run(() -> System.out.println("Debug 1")));
