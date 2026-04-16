@@ -55,8 +55,7 @@ public class RobotContainer {
   private final Roller spindexer;
   private final Mechanism intakePivot;
   private final FuelCommands feulCommands;
-  private final InterpolatingDoubleTreeMap shooterInterpolatingTreeMap;
-  private final InterpolatingDoubleTreeMap shuttleInterpolatingTreeMap;
+  private final InterpolatingDoubleTreeMap interpolatingDoubleTreeMap;
   // private final Vision vision;
 
   // Controller
@@ -155,14 +154,10 @@ public class RobotContainer {
 
         break;
     }
-    shooterInterpolatingTreeMap = new InterpolatingDoubleTreeMap();
-    shooterInterpolatingTreeMap.put(3.9628, (double) 1400);
-    shooterInterpolatingTreeMap.put(3.66, (double) 1300);
-    shooterInterpolatingTreeMap.put(2.17, (double) 1125);
-    shuttleInterpolatingTreeMap = new InterpolatingDoubleTreeMap();
-    shuttleInterpolatingTreeMap.put(7.64, (double) 1400);
-    shuttleInterpolatingTreeMap.put(6.57, (double) 1300);
-    shuttleInterpolatingTreeMap.put(3.05, (double) 1125);
+    interpolatingDoubleTreeMap = new InterpolatingDoubleTreeMap();
+    interpolatingDoubleTreeMap.put(3.9628, (double) 1400);
+    interpolatingDoubleTreeMap.put(3.66, (double) 1300);
+    interpolatingDoubleTreeMap.put(2.17, (double) 1125);
 
     shooterVelocity = new LoggedNetworkNumber("/Tuning/ShooterVelocity", 1125);
     autoShootEnabled = new LoggedNetworkBoolean("/Tuning/AutoShootEnabled", true);
@@ -265,20 +260,10 @@ public class RobotContainer {
     operatorController
         .rightTrigger()
         .and(
-            () ->
-                Math.abs(shooterRoller.getVelocity().getAsDouble() - getTargetVelocity("hub"))
-                    <= 50.0)
+            () -> Math.abs(shooterRoller.getVelocity().getAsDouble() - getTargetVelocity()) <= 50.0)
         .whileTrue(spindexer.intakeCommand())
         .whileTrue(shooterTransfer.intakeCommand());
-    operatorController
-        .x()
-        .whileTrue(
-            PositionBasedAction.shoot(
-                () -> getTargetVelocity("hub"),
-                () -> getTargetVelocity("shuttle"),
-                drive,
-                shooterRoller)); // shooterRoller.runAtVelocityCommand(() ->
-    // getTargetVelocity("hub")));
+    operatorController.x().whileTrue(shooterRoller.runAtVelocityCommand(() -> getTargetVelocity()));
     controller
         .b()
         .whileTrue(
@@ -326,21 +311,13 @@ public class RobotContainer {
    *
    * @return the command to run in autonomous
    */
-  public double getTargetVelocity(String target) {
+  public double getTargetVelocity() {
     if (autoShootEnabled.getAsBoolean() == false) {
       return shooterVelocity.getAsDouble();
     }
-    switch (target) {
-      case "hub":
-        Translation2d robotToHub = getRobotToHubTranslation();
-        double distance = Math.hypot(robotToHub.getX(), robotToHub.getY());
-        return (shooterInterpolatingTreeMap.get(distance));
-      case "shuttle":
-        double robotToShuttleSetpoint = getRobotToShuttleSetpointDistance();
-        return shuttleInterpolatingTreeMap.get(robotToShuttleSetpoint);
-      default:
-        return 0.0;
-    }
+    Translation2d robotToHub = getRobotToHubTranslation();
+    double distance = Math.hypot(robotToHub.getX(), robotToHub.getY());
+    return (interpolatingDoubleTreeMap.get(distance));
   }
 
   public Translation2d getRobotToHubTranslation() {
@@ -355,17 +332,6 @@ public class RobotContainer {
     } else {
       System.out.println("Team not found shooter back to custom value");
       return new Translation2d(0, 0);
-    }
-  }
-
-  public double getRobotToShuttleSetpointDistance() {
-    if (DriverStation.getAlliance().get().equals(DriverStation.Alliance.Red)) {
-      return Math.abs(Units.inchesToMeters(569.11) - drive.getPose().getX());
-    } else if (DriverStation.getAlliance().get().equals(DriverStation.Alliance.Blue)) {
-      return Math.abs(Units.inchesToMeters(82.11) - drive.getPose().getX());
-    } else {
-      System.out.println("Team not found shuttle back to custom value");
-      return 0.0;
     }
   }
 
