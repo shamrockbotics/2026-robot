@@ -17,7 +17,7 @@ public class PositionBasedAction {
   }
 
   public static boolean isInShuttleRange(Drive drive) {
-    return drive.getPose().getX() >= Units.inchesToMeters(469.11)
-        && drive.getPose().getX() <= Units.inchesToMeters(182.11);
+    return drive.getPose().getX() <= Units.inchesToMeters(469.11)
+        && drive.getPose().getX() >= Units.inchesToMeters(182.11);
   }
 }
